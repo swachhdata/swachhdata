@@ -19,3 +19,8 @@
 ## Author-
 
 <a href="https://kritikseth.github.io/ipynbtagredirect" target="_parent"><img src="https://raw.githack.com/kritikseth/kritikseth/master/assets/icons/kritik_ipynbtagredirect.svg" alt="Kritik Seth"/></a>
+
+
+<p align='center'>
+  <img align='center' src="https://visitor-badge.glitch.me/badge?page_id=swachhdata.visitor-badge">
+<p/>
