@@ -1,4 +1,4 @@
-![](https://raw.githubusercontent.com/kritikseth/kritikseth/master/assets/icons/sd-cover.png)
+![](https://raw.githubusercontent.com/swachhdata/swachhdata/main/logo/sd-cover.png)
 
 # swachhdata
 
