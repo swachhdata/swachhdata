@@ -5,7 +5,7 @@ with open('README.md', 'r') as fh:
 
 setup(
     name='swachhdata',
-    version='1.2.2',
+    version='1.2.4',
     author='Kritik Seth',
     author_email='sethkritik@gmail.com',
     description='Data cleaning made easy with swachhdata',

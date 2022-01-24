@@ -1,5 +1,6 @@
 import numpy as np
 
+import os
 from bs4 import BeautifulSoup
 import requests
 import urllib
@@ -100,6 +101,66 @@ class ImageNet:
                     None
                 i += 1
         return self.images_, self.labels_
+
+
+class ImageReader:
+
+    def __init__(self, image_size=(256, 256), color_mode='rgb', interpolation=cv2.INTER_AREA):
+        
+        self._image_size = image_size
+        if color_mode == 'rgb':
+            self._color_mode = cv2.COLOR_BGR2RGB
+            self._color_shape = 3
+        elif color_mode == 'grayscale':
+            self._color_mode = 0
+            self._color_shape = 1
+        else:
+            self._color_mode = cv2.COLOR_BGR2RGB
+            self._color_shape = 3
+        self._interpolation = interpolation
+
+    def __labeled_directory(self, directory):
+        ulabels = os.listdir(directory)
+        nos = len([os.path.join(root, name) for root, dirs, files in os.walk(directory) for name in files])
+        images = np.zeros((nos, self._image_size[0], self._image_size[1], self._color_shape))
+        labels, id = [], 0
+        for label in ulabels:
+            image_paths = os.listdir(os.path.join(directory, label))
+            for image in image_paths:
+                try:
+                    img = cv2.imread(image, self._color_mode)
+                    labels.append(label)
+                    img = cv2.resize(img, self._image_size, interpolation=self._interpolation)
+                    images[id] = img.astype('float32')
+                except Exception as e:
+                    pass
+        return images, labels
+    
+    def __unlabeled_directory(self, directory):
+        ulabels = os.listdir(directory)
+        nos = len([os.path.join(root, name) for root, dirs, files in os.walk(directory) for name in files])
+        images = np.zeros((nos, self._image_size[0], self._image_size[1], self._color_shape))
+        id = 0
+        image_paths = os.listdir(directory)
+        for image in image_paths:
+            try:
+                img = cv2.imread(image, self._color_mode)
+                img = cv2.resize(img, self._image_size, interpolation=self._interpolation)
+                images[id] = img.astype('float32')
+            except Exception as e:
+                pass
+        return images
+
+    def read(self, directory, name, labeled=False):
+        if labeled:
+            images, labels = self.__labeled_directory(directory)
+            setattr(self, name, images)
+            setattr(self, f'{name}_labels_', labels)
+        
+        if not labeled:
+            images = self.__unlabeled_directory(directory)
+            setattr(self, name, images)
+
 
 def image_split(images, labels, split_size=0.5, random_state=None):
     """Split Images and Labels
