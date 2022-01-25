@@ -15,7 +15,6 @@ from ._text import StemmingRecast
 from ._text import LemmatizationRecast
 from ._text import TokenisationRecast
 from ._text import TextRecast
-from ._text import TweetExtractor
 from ._text import RecastPipeline
 
 
@@ -37,6 +36,5 @@ __all__ = [
     'LemmatizationRecast',
     'TokenisationRecast',
     'TextRecast',
-    'TweetExtractor',
     'RecastPipeline'
 ]

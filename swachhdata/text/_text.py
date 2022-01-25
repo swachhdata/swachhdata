@@ -15,10 +15,6 @@ import unicodedata
 import string
 import json
 import textblob
-import tweepy
-from tweepy import OAuthHandler
-from tweepy.streaming import StreamListener
-from tweepy import Stream
 
 from ._base import TextFormatter
 
@@ -3179,79 +3175,6 @@ def TextRecast(text, **kwargs):
 
 ##############################################################################################################
 
-
-class TweetExtractor:
-    """TweetExtractor: wrapper function for tweepy.Cursor, helps you fetch tweets from twitter
-    
-    Parameters
-    ----------
-    keys : dictionary
-
-    keys Template
-    ----------
-    keys = {'consumer_key': '',
-            'consumer_secret': '',
-            'access_token': '',
-            'access_token_secret': ''}
-
-    Examples
-    --------
-    >>> from swachhdata.text import TweetExtractor
-    >>> keys = {'consumer_key': 'xxx',
-                'consumer_secret': 'xxx',
-                'access_token': 'xxx',
-                'access_token_secret': 'xxx'}
-    >>> tweets = TweetExtractor(keys)
-    >>> df = tweets.extract('keyword', count=100, file_name='my_tweets', verbose=1)
-    """
-    
-    def __init__(self, keys):
-        self.__consumer_key = keys['consumer_key']
-        self.__consumer_secret = keys['consumer_secret']
-        self.__access_token = keys['access_token']
-        self.__access_token_secret = keys['access_token_secret']
-        self.__auth = tweepy.OAuthHandler(self.__consumer_key, self.__consumer_secret)
-        self.__auth.set_access_token(self.__access_token, self.__access_token_secret)
-        self.__api = tweepy.API(self.__auth)
-    
-    def extract(self, keyword, count, file_name=None, verbose=0):
-        """Extract Tweets based on parameters
-        Parameters
-        ----------
-        keyword : string
-        count : int
-        file_name : string
-        verbose : int (0 / 1)
-
-        Returns
-        -------
-        df : pandas.DataFrame if file_name not mentioned
-        """
-        i = 0
-        df = pandas.DataFrame(columns = ['ID', 'User', 'Tweets','fav_count', 'rt_count', 'tweet_date'])
-        if verbose==1:
-            pbar = tqdm(total=count)
-        for tweet in tweepy.Cursor(self.__api.search, q=keyword, count=100, lang='en', tweet_mode='extended').items():
-            df.loc[i,'ID'] = tweet.id
-            df.loc[i,'Tweets'] = tweet.full_text
-            df.loc[i,'User'] = tweet.user.name
-            df.loc[i,'fav_count'] = tweet.favorite_count
-            df.loc[i,'rt_count'] = tweet.retweet_count
-            df.loc[i,'tweet_date'] = tweet.created_at
-            i+=1
-            if verbose==1:
-                pbar.update(1)
-            if i==count:
-                break
-            else:
-                pass
-        if file_name!=None:
-            df.to_csv(f'{file_name}.csv', index=False)
-        else:
-            return df
-
-
-##############################################################################################################
 
       
 def RecastPipeline(text, recastFuncs, **kwargs):

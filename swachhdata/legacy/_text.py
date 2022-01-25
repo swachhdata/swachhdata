@@ -22,7 +22,7 @@ from operator import add
 from itertools import starmap
 from nltk.stem import LancasterStemmer
 
-lancaster=LancasterStemmer()
+lancaster = LancasterStemmer()
 stopWords = set(stopwords.words('english'))
 word = WhitespaceTokenizer()
 
