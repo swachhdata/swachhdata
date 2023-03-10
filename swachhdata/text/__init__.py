@@ -4,7 +4,6 @@ from ._text import EscapeSequenceRecast
 from ._text import MentionRecast
 from ._text import ContractionsRecast
 from ._text import CaseRecast
-from ._text import EmojiRecast
 from ._text import HashtagRecast
 from ._text import ShortWordsRecast
 from ._text import StopWordsRecast
@@ -25,7 +24,6 @@ __all__ = [
     'MentionRecast',
     'ContractionsRecast',
     'CaseRecast',
-    'EmojiRecast',
     'HashtagRecast',
     'ShortWordsRecast',
     'StopWordsRecast',

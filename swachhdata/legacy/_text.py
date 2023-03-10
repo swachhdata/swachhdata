@@ -9,8 +9,6 @@ nltk.download('stopwords')
 from bs4 import BeautifulSoup
 from html import unescape
 import contractions
-import emoji
-from emoji import UNICODE_EMOJI
 import unicodedata
 import num2words
 import pandas
@@ -38,6 +36,7 @@ class TextSetup:
             self.text = self.t
 
 class SwachhText(TextSetup):
+
     def __init__(self, TextSetup):
         self.t = TextSetup.t
         self.text = self.t
@@ -121,58 +120,6 @@ class SwachhText(TextSetup):
             
         elif self.dtype_str:
             ntext = self.text.lower()
-            return ntext
-
-    def space_out_emoji(self):
-
-        if self.dtype_list:
-            ntext = []
-            for part in self.text:
-                spaced = ''
-                for char in part:
-                    if char in UNICODE_EMOJI:
-                        spaced += ' '
-                    spaced += char
-                ntext.append(spaced)
-            return ntext    
-            
-        elif self.dtype_str:
-            spaced = ''
-            for char in self.text:
-                if char in UNICODE_EMOJI:
-                    spaced += ' '
-                spaced += char
-            ntext = spaced
-            return ntext
-        
-    def replace_emoji(self):
-        
-        if self.dtype_list:
-            ntext = []
-            for i in self.text: 
-                ntext.append(emoji.demojize(i, delimiters=('', ' ')))
-            return ntext
-            
-        elif self.dtype_str:
-            ntext = emoji.demojize(self.text, delimiters=('', ' '))
-            return ntext
-        
-    def remove_emoji(self):
-
-        if self.dtype_list:
-            ntext = []
-            for i in self.text:
-                allchars = [str for str in i]
-                emoji_list = [c for c in allchars if c in emoji.UNICODE_EMOJI]
-                strip_text = ' '.join([str for str in i.split() if not any(j in str for j in emoji_list)])
-                ntext.append(strip_text)
-            return ntext
-            
-        elif self.dtype_str:
-            allchars = [str for str in self.text]
-            emoji_list = [c for c in allchars if c in emoji.UNICODE_EMOJI]
-            strip_text = ' '.join([str for str in self.text.split() if not any(j in str for j in emoji_list)])
-            ntext = strip_text
             return ntext
         
     def remove_accented_char(self):
@@ -402,6 +349,7 @@ class SwachhText(TextSetup):
             return ntext
 
 class SwachhSabText(SwachhText):
+
     def __init__(self, SwachhText):
         self.t = SwachhText.t
         self.text = self.t
@@ -443,16 +391,6 @@ class SwachhSabText(SwachhText):
         
         if 'lower_case' in kwargs and kwargs['lower_case']:
             self.text = SwachhText.lower_case(self)
-
-        if 'rep_emoji' in kwargs and kwargs['rep_emoji']:
-            if verbose:
-                print('Replacing emojis...')
-            self.text = SwachhText.replace_emoji(self)
-
-        if 'rem_emoji' in kwargs and kwargs['rem_emoji']:
-            if verbose:
-                print('Removing emojis...')
-            self.text = SwachhText.remove_emoji(self)
 
         if 'rem_acc_char' in kwargs and kwargs['rem_acc_char']:
             if verbose:

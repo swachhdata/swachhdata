@@ -7,7 +7,7 @@ from setuptools import setup, find_namespace_packages
 
 setup(
     name='swachhdata',
-    version='1.2.8',
+    version='1.4.0',
     author='Kritik Seth',
     author_email='sethkritik@gmail.com',
     description='Data cleaning made easy with swachhdata',
@@ -32,7 +32,6 @@ setup(
         'beautifulsoup4>=4.6.3',
         'html5lib>=1.0.1',
         'contractions>=0.0.25',
-        'emoji>=0.6.0',
         'nltk>=3.6.5',
         'spacy>=2.2.4',
         'gensim>=3.6.0',
@@ -40,6 +39,6 @@ setup(
         'textblob>=0.15.3',
         'requests>=2.23.0',
         'opencv-python>=4.1.2.30',
-        'tweepy>=3.6.0'
+        'tweepy>=3.6.0',
     ]
 )

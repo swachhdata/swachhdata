@@ -18,7 +18,7 @@
 
 ## Author-
 
-<a href="https://kritikseth.github.io/ipynbtagredirect" target="_parent"><img src="https://raw.githack.com/kritikseth/kritikseth/master/assets/icons/kritik_ipynbtagredirect.svg" alt="Kritik Seth"/></a>
+<a href="https://www.kritikseth.com/redirect" target="_parent"><img src="https://raw.githack.com/kritikseth/kritikseth/master/redirect.svg" alt="Kritik Seth"/></a>
 
 
 <p align='center'>

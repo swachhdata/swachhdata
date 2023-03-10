@@ -4,8 +4,6 @@ from tqdm.auto import trange, tqdm
 from bs4 import BeautifulSoup
 from html import unescape
 import contractions
-import emoji
-from emoji import UNICODE_EMOJI
 import nltk
 nltk.download('popular', quiet=True)
 import spacy

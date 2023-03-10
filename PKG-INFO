@@ -1,10 +1,12 @@
 Metadata-Version: 2.1
 Name: swachhdata
-Version: 1.4.0
+Version: 1.2.8
 Summary: Data cleaning made easy with swachhdata
 Home-page: https://github.com/swachhdata/swachhdata
 Author: Kritik Seth
 Author-email: sethkritik@gmail.com
+License: UNKNOWN
+Platform: UNKNOWN
 Classifier: Natural Language :: English
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.6
@@ -36,9 +38,11 @@ License-File: LICENSE.txt
 
 ## Author-
 
-<a href="https://www.kritikseth.com/redirect" target="_parent"><img src="https://raw.githack.com/kritikseth/kritikseth/master/redirect.svg" alt="Kritik Seth"/></a>
+<a href="https://kritikseth.github.io/ipynbtagredirect" target="_parent"><img src="https://raw.githack.com/kritikseth/kritikseth/master/assets/icons/kritik_ipynbtagredirect.svg" alt="Kritik Seth"/></a>
 
 
 <p align='center'>
   <img align='center' src="https://visitor-badge.glitch.me/badge?page_id=swachhdata.visitor-badge">
 <p/>
+
+

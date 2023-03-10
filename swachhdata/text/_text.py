@@ -4,8 +4,6 @@ from tqdm.auto import trange, tqdm
 from bs4 import BeautifulSoup
 from html import unescape
 import contractions
-import emoji
-from emoji import UNICODE_EMOJI
 import nltk
 nltk.download('popular', quiet=True)
 import spacy
@@ -1028,265 +1026,265 @@ class CaseRecast(TextFormatter):
 ##############################################################################################################
 
 
-class EmojiRecast(TextFormatter):
-    """Recast text data by removing, replaing or extracting Emoji(s).
+# class EmojiRecast(TextFormatter):
+#     """Recast text data by removing, replaing or extracting Emoji(s).
     
-    Parameters
-    ----------
-    process: string ('remove', 'replace', 'extract', 'extract_remove', 'extract_replace'), default='remove'
-    space_out = bool (True, False), default=False
-    verbose: int (0, 1, -1), default=0
+#     Parameters
+#     ----------
+#     process: string ('remove', 'replace', 'extract', 'extract_remove', 'extract_replace'), default='remove'
+#     space_out = bool (True, False), default=False
+#     verbose: int (0, 1, -1), default=0
 
-    Attributes
-    ----------
-    emoji_ : list of emoji(s)
-        extracted emoji(s)
+#     Attributes
+#     ----------
+#     emoji_ : list of emoji(s)
+#         extracted emoji(s)
     
 
-    Examples
-    --------
-    >>> # process='remove'
-    >>> from swachhdata.text import EmojiRecast
-    >>> text = 'Thanks a lot for your wishes! 😊'
-    >>> rec = EmojiRecast(process='remove')
-    >>> rec.setup(text)
-    >>> rec.recast()
-    'Thanks a lot for your wishes!'
-    >>> # OR
-    >>> rec.setup_recast(text)
-    'Thanks a lot for your wishes!'
-    >>> 
-    >>> # process='replace'
-    >>> from swachhdata.text import EmojiRecast
-    >>> text = 'Thanks a lot for your wishes! 😊'
-    >>> rec = EmojiRecast(process='replace')
-    >>> rec.setup(text)
-    >>> rec.recast()
-    'Thanks a lot for your wishes! smiling_face_with_smiling_eyes '
-    >>> # OR
-    >>> rec.setup_recast(text)
-    'Thanks a lot for your wishes! smiling_face_with_smiling_eyes '
-    >>> 
-    >>> # process='extract'
-    >>> from swachhdata.text import EmojiRecast
-    >>> text = 'Thanks a lot for your wishes! 😊'
-    >>> rec = EmojiRecast(process='extract')
-    >>> rec.setup(text)
-    >>> rec.recast()
-    ['😊']
-    >>> # OR
-    >>> rec.setup_recast(text)
-    ['😊']
-    >>> # process='extract_remove'
-    >>> from swachhdata.text import EmojiRecast
-    >>> text = 'Thanks a lot for your wishes! 😊'
-    >>> rec = EmojiRecast(process='extract_remove')
-    >>> rec.setup(text)
-    >>> rec.recast()
-    'Thanks a lot for your wishes!'
-    ['😊']
-    >>> # OR
-    >>> rec.setup_recast(text)
-    'Thanks a lot for your wishes!'
-    ['😊']
-    >>> # process='extract_replace'
-    >>> from swachhdata.text import EmojiRecast
-    >>> text = 'Thanks a lot for your wishes! 😊'
-    >>> rec = EmojiRecast(process='extract_replace')
-    >>> rec.setup(text)
-    >>> rec.recast()
-    'Thanks a lot for your wishes! smiling_face_with_smiling_eyes'
-    ['😊']
-    >>> # OR
-    >>> rec.setup_recast(text)
-    'Thanks a lot for your wishes! smiling_face_with_smiling_eyes'
-    ['😊']
-    """
+#     Examples
+#     --------
+#     >>> # process='remove'
+#     >>> from swachhdata.text import EmojiRecast
+#     >>> text = 'Thanks a lot for your wishes! 😊'
+#     >>> rec = EmojiRecast(process='remove')
+#     >>> rec.setup(text)
+#     >>> rec.recast()
+#     'Thanks a lot for your wishes!'
+#     >>> # OR
+#     >>> rec.setup_recast(text)
+#     'Thanks a lot for your wishes!'
+#     >>> 
+#     >>> # process='replace'
+#     >>> from swachhdata.text import EmojiRecast
+#     >>> text = 'Thanks a lot for your wishes! 😊'
+#     >>> rec = EmojiRecast(process='replace')
+#     >>> rec.setup(text)
+#     >>> rec.recast()
+#     'Thanks a lot for your wishes! smiling_face_with_smiling_eyes '
+#     >>> # OR
+#     >>> rec.setup_recast(text)
+#     'Thanks a lot for your wishes! smiling_face_with_smiling_eyes '
+#     >>> 
+#     >>> # process='extract'
+#     >>> from swachhdata.text import EmojiRecast
+#     >>> text = 'Thanks a lot for your wishes! 😊'
+#     >>> rec = EmojiRecast(process='extract')
+#     >>> rec.setup(text)
+#     >>> rec.recast()
+#     ['😊']
+#     >>> # OR
+#     >>> rec.setup_recast(text)
+#     ['😊']
+#     >>> # process='extract_remove'
+#     >>> from swachhdata.text import EmojiRecast
+#     >>> text = 'Thanks a lot for your wishes! 😊'
+#     >>> rec = EmojiRecast(process='extract_remove')
+#     >>> rec.setup(text)
+#     >>> rec.recast()
+#     'Thanks a lot for your wishes!'
+#     ['😊']
+#     >>> # OR
+#     >>> rec.setup_recast(text)
+#     'Thanks a lot for your wishes!'
+#     ['😊']
+#     >>> # process='extract_replace'
+#     >>> from swachhdata.text import EmojiRecast
+#     >>> text = 'Thanks a lot for your wishes! 😊'
+#     >>> rec = EmojiRecast(process='extract_replace')
+#     >>> rec.setup(text)
+#     >>> rec.recast()
+#     'Thanks a lot for your wishes! smiling_face_with_smiling_eyes'
+#     ['😊']
+#     >>> # OR
+#     >>> rec.setup_recast(text)
+#     'Thanks a lot for your wishes! smiling_face_with_smiling_eyes'
+#     ['😊']
+#     """
 
-    def __init__(self, process='remove', space_out=False, verbose=0):
+#     def __init__(self, process='remove', space_out=False, verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__process = process
-        self.__space_out = space_out
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-        self.emoji_ = None
-        self.__emojis_list = list(UNICODE_EMOJI['en'].keys()) + list(UNICODE_EMOJI['es'].keys()) + list(UNICODE_EMOJI['pt'].keys()) + list(UNICODE_EMOJI['it'].keys())
+#         TextFormatter.__init__(self)
+#         self.__setup = False
+#         self.__process = process
+#         self.__space_out = space_out
+#         self.__verbose_status = True
+#         self.__verbose = verbose
+#         if self.__verbose == -1:
+#             self.__verbose_status = False
+#         self.emoji_ = None
+#         self.__emojis_list = list(UNICODE_EMOJI['en'].keys()) + list(UNICODE_EMOJI['es'].keys()) + list(UNICODE_EMOJI['pt'].keys()) + list(UNICODE_EMOJI['it'].keys())
 
-        try:
-            assert(isinstance(self.__process, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__process)}')
+#         try:
+#             assert(isinstance(self.__process, str))
+#         except:
+#             print(f'Expected process input type <class \'str\'>, input type received {type(self.__process)}')
         
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
+#         try:
+#             assert(isinstance(self.__verbose, int))
+#         except:
+#             print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
 
 
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
+#     def setup(self, text):
+#         """Change the input text type to supported type
+#         Parameters
+#         ----------
+#         text : string / list of strings / pandas.core.series.Series
 
-        Returns
-        -------
-        self : object
-        """
+#         Returns
+#         -------
+#         self : object
+#         """
 
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
+#         self._dtype = type(text)
+#         self._text = text
+#         self._TextFormatter__text_formatter()
+#         self.__setup = True
     
     
-    def __base_recast(self, text):
-        """Perform selected process on the setup text
+#     def __base_recast(self, text):
+#         """Perform selected process on the setup text
 
-        Parameters
-        ----------
-        text : string / pandas.core.series.Series
+#         Parameters
+#         ----------
+#         text : string / pandas.core.series.Series
 
-        Returns
-        -------
-        ntext : string (process='remove' / process='replace')
-            Processed text
-        emoji : list of strings (process='extract')
-            Extracted Emojis
-        ntext, emoji : string, list of strings (process='extract_remove' / process='extract_replace')
-            Processed text, Extracted Emojis
-        """
-        if self.__space_out:
-            spaced = ''
-            for char in text:
-                if char in self.__emojis_list:
-                    spaced += ' '
-                spaced += char
-            text = spaced
-            text = re.sub(' +', ' ', text)
+#         Returns
+#         -------
+#         ntext : string (process='remove' / process='replace')
+#             Processed text
+#         emoji : list of strings (process='extract')
+#             Extracted Emojis
+#         ntext, emoji : string, list of strings (process='extract_remove' / process='extract_replace')
+#             Processed text, Extracted Emojis
+#         """
+#         if self.__space_out:
+#             spaced = ''
+#             for char in text:
+#                 if char in self.__emojis_list:
+#                     spaced += ' '
+#                 spaced += char
+#             text = spaced
+#             text = re.sub(' +', ' ', text)
         
-        if self.__process == 'remove':
-            allchars = [str for str in text]
-            emoji_list = [c for c in allchars if c in self.__emojis_list]
-            text = ' '.join([str for str in text.split() if not any(j in str for j in emoji_list)])
-            return text
+#         if self.__process == 'remove':
+#             allchars = [str for str in text]
+#             emoji_list = [c for c in allchars if c in self.__emojis_list]
+#             text = ' '.join([str for str in text.split() if not any(j in str for j in emoji_list)])
+#             return text
 
-        elif self.__process == 'replace':
-            text = emoji.demojize(text, delimiters=('', ''))
-            return text
+#         elif self.__process == 'replace':
+#             text = emoji.demojize(text, delimiters=('', ''))
+#             return text
 
-        elif self.__process == 'extract':
-            allchars = [str for str in text]
-            emoji_list = [c for c in allchars if c in self.__emojis_list]
-            self.emoji_ = emoji_list
-            return emoji_list
+#         elif self.__process == 'extract':
+#             allchars = [str for str in text]
+#             emoji_list = [c for c in allchars if c in self.__emojis_list]
+#             self.emoji_ = emoji_list
+#             return emoji_list
         
-        elif self.__process == 'extract_remove':
-            allchars = [str for str in text]
-            emoji_list = [c for c in allchars if c in self.__emojis_list]
-            text = ' '.join([str for str in text.split() if not any(j in str for j in emoji_list)])
-            self.emoji_ = emoji_list
-            return text, emoji_list
+#         elif self.__process == 'extract_remove':
+#             allchars = [str for str in text]
+#             emoji_list = [c for c in allchars if c in self.__emojis_list]
+#             text = ' '.join([str for str in text.split() if not any(j in str for j in emoji_list)])
+#             self.emoji_ = emoji_list
+#             return text, emoji_list
         
-        elif self.__process == 'extract_replace':
-            allchars = [str for str in text]
-            emoji_list = [c for c in allchars if c in self.__emojis_list]
-            text = emoji.demojize(text, delimiters=('', ''))
-            self.emoji_ = emoji_list
-            return text, emoji_list
+#         elif self.__process == 'extract_replace':
+#             allchars = [str for str in text]
+#             emoji_list = [c for c in allchars if c in self.__emojis_list]
+#             text = emoji.demojize(text, delimiters=('', ''))
+#             self.emoji_ = emoji_list
+#             return text, emoji_list
 
 
-    def recast(self):
-        """
-        Perform selected process on the setup text
+#     def recast(self):
+#         """
+#         Perform selected process on the setup text
 
-        Returns
-        -------
-        ntext : string / list of strings (process='remove' / process='replace')
-            Processed text
-        emoji : string / list of strings (process='extract')
-            Extracted Emojis
-        ntext, emoji : string / list of strings, list of strings (process='extract_remove' / process='extract_replace')
-            Processed text, Extracted Emojis
-        """
+#         Returns
+#         -------
+#         ntext : string / list of strings (process='remove' / process='replace')
+#             Processed text
+#         emoji : string / list of strings (process='extract')
+#             Extracted Emojis
+#         ntext, emoji : string / list of strings, list of strings (process='extract_remove' / process='extract_replace')
+#             Processed text, Extracted Emojis
+#         """
         
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
+#         try:
+#             assert(self.__setup)
+#         except:
+#             print(f'method setup needs to be called before recast')
         
-        if self._dtype == str:
-            return self.__base_recast(self._text)
+#         if self._dtype == str:
+#             return self.__base_recast(self._text)
 
-        elif self._dtype == list:
+#         elif self._dtype == list:
 
-            if self.__verbose == 0:
+#             if self.__verbose == 0:
 
-                if self.__process in ['remove', 'replace', 'extract']:
-                    ntext = []
-                    for text in self._text:
-                        ntext.append(self.__base_recast(text))
-                    return ntext
+#                 if self.__process in ['remove', 'replace', 'extract']:
+#                     ntext = []
+#                     for text in self._text:
+#                         ntext.append(self.__base_recast(text))
+#                     return ntext
 
-                elif self.__process in ['extract_remove', 'extract_replace']:
-                    ntext, emoji_list = [], []
-                    for text in self._text:
-                        text, emoji = self.__base_recast(text)
-                        ntext.append(text)
-                        emoji_list.append(emoji)
-                    self.url_ = emoji_list
-                    return ntext, emoji_list
+#                 elif self.__process in ['extract_remove', 'extract_replace']:
+#                     ntext, emoji_list = [], []
+#                     for text in self._text:
+#                         text, emoji = self.__base_recast(text)
+#                         ntext.append(text)
+#                         emoji_list.append(emoji)
+#                     self.url_ = emoji_list
+#                     return ntext, emoji_list
                     
             
-            if self.__verbose == 1 or self.__verbose == -1:
+#             if self.__verbose == 1 or self.__verbose == -1:
 
-                if self.__process in ['remove', 'replace', 'extract']:
-                    ntext = []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'EmojiRecast process': self.__process})
-                        text = self._text[i]
-                        ntext.append(self.__base_recast(text))
-                    return ntext
+#                 if self.__process in ['remove', 'replace', 'extract']:
+#                     ntext = []
+#                     progress_bar = trange(self._count, leave=self.__verbose_status)
+#                     for i in progress_bar:
+#                         progress_bar.set_postfix({'EmojiRecast process': self.__process})
+#                         text = self._text[i]
+#                         ntext.append(self.__base_recast(text))
+#                     return ntext
 
-                elif self.__process in ['extract_remove', 'extract_replace']:
-                    ntext, emoji_list = [], []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'EmojiRecast process': self.__process})
-                        text = self._text[i]
-                        text, emoji = self.__base_recast(text)
-                        ntext.append(text)
-                        emoji_list.append(emoji)
-                    self.url_ = emoji_list
-                    return ntext, emoji_list
+#                 elif self.__process in ['extract_remove', 'extract_replace']:
+#                     ntext, emoji_list = [], []
+#                     progress_bar = trange(self._count, leave=self.__verbose_status)
+#                     for i in progress_bar:
+#                         progress_bar.set_postfix({'EmojiRecast process': self.__process})
+#                         text = self._text[i]
+#                         text, emoji = self.__base_recast(text)
+#                         ntext.append(text)
+#                         emoji_list.append(emoji)
+#                     self.url_ = emoji_list
+#                     return ntext, emoji_list
 
 
-    def setup_recast(self, text):
-        """Change the input text type to supported type
-        and
-        Perform selected process on the setup text
+#     def setup_recast(self, text):
+#         """Change the input text type to supported type
+#         and
+#         Perform selected process on the setup text
 
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
+#         Parameters
+#         ----------
+#         text : string / list of strings / pandas.core.series.Series
 
-        Returns
-        -------
-        ntext : string / list of strings (process='remove' / process='replace')
-            Processed text
-        emoji : string / list of strings (process='extract')
-            Extracted Emojis
-        ntext, emoji : string / list of strings, list of strings (process='extract_remove' / process='extract_replace')
-            Processed text, Extracted Emojis
-        """
+#         Returns
+#         -------
+#         ntext : string / list of strings (process='remove' / process='replace')
+#             Processed text
+#         emoji : string / list of strings (process='extract')
+#             Extracted Emojis
+#         ntext, emoji : string / list of strings, list of strings (process='extract_remove' / process='extract_replace')
+#             Processed text, Extracted Emojis
+#         """
 
-        self.setup(text)
-        return self.recast()
+#         self.setup(text)
+#         return self.recast()
 
 
 ##############################################################################################################
@@ -3059,22 +3057,22 @@ def TextRecast(text, **kwargs):
         text = CaseRecast(kwargs['CaseRecast']['process'], verbose=verbose).setup_recast(text)
         pbar.update(tcount)
     
-    if 'EmojiRecast' in kwargs:
+    # if 'EmojiRecast' in kwargs:
 
-        ccount +=  1
-        pbar.set_postfix({'EmojiRecast || TextRecast No': f'{ccount}/{rcount}'})
+    #     ccount +=  1
+    #     pbar.set_postfix({'EmojiRecast || TextRecast No': f'{ccount}/{rcount}'})
         
-        global emoji
-        if kwargs['EmojiRecast']['process'] == 'extract_remove':
-           text, emoji  = EmojiRecast(kwargs['EmojiRecast']['process'], kwargs['EmojiRecast']['space_out'], verbose=verbose).setup_recast(text)
+    #     global emoji
+    #     if kwargs['EmojiRecast']['process'] == 'extract_remove':
+    #        text, emoji  = EmojiRecast(kwargs['EmojiRecast']['process'], kwargs['EmojiRecast']['space_out'], verbose=verbose).setup_recast(text)
 
-        elif kwargs['EmojiRecast']['process'] == 'extract':
-            emoji  = EmojiRecast(kwargs['EmojiRecast']['process'], kwargs['EmojiRecast']['space_out'], verbose=verbose).setup_recast(text)
+    #     elif kwargs['EmojiRecast']['process'] == 'extract':
+    #         emoji  = EmojiRecast(kwargs['EmojiRecast']['process'], kwargs['EmojiRecast']['space_out'], verbose=verbose).setup_recast(text)
         
-        elif kwargs['EmojiRecast']['process'] == 'remove':
-           text = EmojiRecast(kwargs['EmojiRecast']['process'], kwargs['EmojiRecast']['space_out'], verbose=verbose).setup_recast(text)
+    #     elif kwargs['EmojiRecast']['process'] == 'remove':
+    #        text = EmojiRecast(kwargs['EmojiRecast']['process'], kwargs['EmojiRecast']['space_out'], verbose=verbose).setup_recast(text)
 
-        pbar.update(tcount)
+    #     pbar.update(tcount)
     
     if 'HashtagRecast' in kwargs:
 

@@ -1,5 +1,6 @@
 LICENSE.txt
 README.md
+setup.cfg
 setup.py
 swachhdata/__init__.py
 swachhdata.egg-info/PKG-INFO
