@@ -1,30 +1,27 @@
 import os
+import setuptools
 
 with open('README.md', 'r') as fh:
     long_description = fh.read()
 
-from setuptools import setup, find_namespace_packages
+import swachhdata
 
-setup(
+setuptools.setup(
     name='swachhdata',
-    version='1.4.0',
-    author='Kritik Seth',
+    version=swachhdata.__version__,
+    author=swachhdata.__author__,
     author_email='sethkritik@gmail.com',
     description='Data cleaning made easy with swachhdata',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/swachhdata/swachhdata',
+    url=swachhdata.__url__,
     classifiers=[
         'Natural Language :: English',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
         'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
         'Operating System :: OS Independent',
-        'Development Status :: 4 - Beta'
+        'Development Status :: 6 - Mature'
     ],
-    packages=find_namespace_packages(include=['swachhdata', 'swachhdata.*']),
+    packages=setuptools.find_namespace_packages(include=['swachhdata', 'swachhdata.*']),
     install_requires=[
         'regex>=2019.12.20',
         'pandas>=1.1.4',
