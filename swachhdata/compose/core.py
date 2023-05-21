@@ -11,7 +11,7 @@ from ..utils.probe import (
     probe_string_data
 )
 
-class TextDatum:
+class BaseTextDatum:
 
     """
     Data formatter, converts heterogenous text data types to homogenous list of string(s).
@@ -43,3 +43,12 @@ class TextDatum:
     
     def recast(self):
         self.__data = probe_string_data(self.__data)
+
+class TextDatum(BaseTextDatum):
+
+    def __init__(self, text):
+        super().__init__(text)
+    
+    def __add__(self, other):
+        data = self.data + other.data
+        return TextDatum(data)
