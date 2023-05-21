@@ -29,7 +29,7 @@ class BaseTextDatum:
 
         self.__data = None
         self.data = text
-        self.__base_text_datum = None
+        self.id_text_datum = None
     
     def __str__(self):
         return str(self.data)

@@ -40,7 +40,7 @@ class BaseTextRecast(BaseTextDatum):
         """
         Setup
         """
-        if hasattr(data, '__base_text_datum'):
+        if hasattr(data, 'id_text_datum'):
             self.__dict__.update(data.__dict__)
         else:
             self.data = data
