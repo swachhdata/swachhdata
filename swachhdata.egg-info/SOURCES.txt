@@ -8,6 +8,8 @@ swachhdata.egg-info/SOURCES.txt
 swachhdata.egg-info/dependency_links.txt
 swachhdata.egg-info/requires.txt
 swachhdata.egg-info/top_level.txt
+swachhdata/compose/__init__.py
+swachhdata/compose/core.py
 swachhdata/image/__init__.py
 swachhdata/image/_image.py
 swachhdata/legacy/__init__.py
@@ -15,3 +17,8 @@ swachhdata/legacy/_text.py
 swachhdata/text/__init__.py
 swachhdata/text/_base.py
 swachhdata/text/_text.py
+swachhdata/utils/__init__.py
+swachhdata/utils/probe.py
+swachhdata/utils/recast.py
+swachhdata/utils/tools.py
+swachhdata/utils/verify.py

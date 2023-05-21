@@ -1,11 +1,6 @@
 import pandas
 import numpy
 
-from .tools import (
-    fetch_num_columns,
-    fetch_array_dim
-)
-
 def verify_array(data):
     return isinstance(data, numpy.ndarray)
 
@@ -20,6 +15,11 @@ def verify_list(data):
 
 def verify_str(data):
     return isinstance(data, str)
+
+from .tools import (
+    fetch_num_columns,
+    fetch_array_dim
+)
 
 def verify_valid_ndim_text(data):
     if verify_dataframe(data):

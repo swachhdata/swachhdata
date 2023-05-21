@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: swachhdata
-Version: 1.4.1
+Version: 1.5.0a1
 Summary: Data cleaning made easy with swachhdata
 Home-page: https://swachhdata.readthedocs.io/
 Author: Kritik Seth
@@ -18,7 +18,7 @@ License-File: LICENSE.txt
 
 [![pypi package](https://badge.fury.io/py/swachhdata.svg)](https://pypi.org/project/swachhdata)
 [![Downloads](https://static.pepy.tech/personalized-badge/swachhdata?period=total&units=international_system&left_color=gray&right_color=blue&left_text=Downloads)](https://pepy.tech/project/swachhdata)
-[![GitHub last commit](https://img.shields.io/github/last-commit/kritikseth/swachhdata.svg)](https://github.com/swachhdata/swachhdata/)
+![GitHub last commit](https://img.shields.io/github/last-commit/swachhdata/swachhdata?color=green)
 [![GitHub](https://img.shields.io/github/license/kritikseth/swachhdata.svg)](https://github.com/kritikseth/swachhdata/blob/master/LICENSE)
 
 * Simple and efficient tools for cleaning and transforming data
