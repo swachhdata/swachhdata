@@ -29,6 +29,10 @@ class BaseTextDatum:
 
         self.__data = None
         self.data = text
+        self.__base_text_datum = None
+    
+    def __str__(self):
+        return str(self.data)
     
     def __len__(self):
         return fetch_num_rows(self.__data)

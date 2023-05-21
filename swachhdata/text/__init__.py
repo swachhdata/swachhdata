@@ -16,6 +16,10 @@ from ._text import TokenisationRecast
 from ._text import TextRecast
 from ._text import RecastPipeline
 
+from ._base import (
+    BaseTextRecast
+)
+
 
 __all__ = [
     'urlRecast',
@@ -34,5 +38,6 @@ __all__ = [
     'LemmatizationRecast',
     'TokenisationRecast',
     'TextRecast',
-    'RecastPipeline'
+    'RecastPipeline',
+    'BaseTextRecast'
 ]
