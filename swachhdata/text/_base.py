@@ -46,12 +46,12 @@ class BaseTextRecast(BaseTextDatum):
         if not isinstance(verbose, int):
             raise IncorrectVerboseDataType(verbose)
         
-        self.__setup_check = False
-        self.__process = process
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
+        self._setup_check = False
+        self._process = process
+        self._verbose_status = True
+        self._verbose = verbose
+        if self._verbose == -1:
+            self._verbose_status = False
     
     def setup(self, text):
         """
@@ -62,20 +62,20 @@ class BaseTextRecast(BaseTextDatum):
         else:
             self.data = text
         
-        self.__setup_check = True
+        self._setup_check = True
     
     def recast(self):
         """
         Recast
         """
-        if not self.__setup_check:
-            raise SetupNotImplementedError(self.__setup_check)
+        if not self._setup_check:
+            raise SetupNotImplementedError(self._setup_check)
 
     def setup_recast(self, text=None):
         """
         Setup & Recast
         """
-        if not self.__setup_check:
+        if not self._setup_check:
             self.setup(text)
             return self.recast()
         else:
