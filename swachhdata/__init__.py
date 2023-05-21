@@ -1,4 +1,4 @@
-__version__ = '1.5.5a1'
+__version__ = '1.5.6a1'
 __author__ = 'Kritik Seth'
 __maintainer__ = __author__
 __license__ = 'Mozilla Public License Version 2.0'
