@@ -42,5 +42,5 @@ def verify_valid_dtype_text(data):
        return True
     else:
         raise ValueError(
-                    f'The data should be of one of the following type - list / str / numpy.ndarray / pandas.core.DataFrame / pandas.core.Series.'
+                    f'The data should be of one of the following types - list / str / numpy.ndarray / pandas.core.DataFrame / pandas.core.Series.'
                 )
