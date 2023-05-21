@@ -1,10 +1,9 @@
 import os
 import setuptools
+import swachhdata
 
 with open('README.md', 'r') as fh:
     long_description = fh.read()
-
-import swachhdata
 
 setuptools.setup(
     name='swachhdata',
