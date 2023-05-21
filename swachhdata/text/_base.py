@@ -36,7 +36,7 @@ class BaseTextRecast(BaseTextDatum):
         Initialize
         """
     
-    def setup(self, data)
+    def setup(self, data):
         """
         Setup
         """
