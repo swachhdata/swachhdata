@@ -24,35 +24,41 @@ class BaseTextDatum:
 
     def __init__(self, text=None):
         
-        dtype_check = verify_valid_dtype_text(text)
-        ndim_check = verify_valid_ndim_text(text)
-
-        self.__data = None
-        self.data = text
+        self._data = None
         self.id_text_datum = None
+
+        if text is not None:
+            dtype_check = verify_valid_dtype_text(text)
+            ndim_check = verify_valid_ndim_text(text)
+            self.data = text
     
-    def __str__(self):
-        return str(self.data)
-    
-    def __len__(self):
-        return fetch_num_rows(self.__data)
+    @property
+    def ntext(self):
+        return fetch_num_rows(self._data)
 
     @property
     def data(self):
-        return self.__data
+        return self._data
 
     @data.setter
     def data(self, text):
-        self.__data = probe_string_data(text)
-    
-    def recast(self):
-        self.__data = probe_string_data(self.__data)
+        self._data = probe_string_data(text)
+
 
 class TextDatum(BaseTextDatum):
 
     def __init__(self, text):
         super().__init__(text)
     
+    def __str__(self):
+        return str(self.data)
+    
+    def __len__(self):
+        return self.ntext
+    
     def __add__(self, other):
         data = self.data + other.data
         return TextDatum(data)
+    
+    def recast(self):
+        self._data = probe_string_data(self._data)

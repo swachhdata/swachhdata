@@ -1,34 +1,31 @@
-from ._text import urlRecast
-from ._text import htmlRecast
-from ._text import EscapeSequenceRecast
-from ._text import MentionRecast
-from ._text import ContractionsRecast
-from ._text import CaseRecast
-from ._text import HashtagRecast
-from ._text import ShortWordsRecast
-from ._text import StopWordsRecast
-from ._text import NumberRecast
-from ._text import AlphabetRecast
-from ._text import PunctuationRecast
-from ._text import StemmingRecast
-from ._text import LemmatizationRecast
-from ._text import TokenisationRecast
-from ._text import TextRecast
-from ._text import RecastPipeline
-
-from ._base import (
-    BaseTextRecast
+from ._text import (
+    urlRecast,
+    htmlRecast,
+    EscapeSequencesRecast,
+    MentionsRecast,
+    ContractionsRecast,
+    CaseRecast,
+    HashtagsRecast,
+    ShortWordsRecast,
+    StopWordsRecast,
+    NumberRecast,
+    AlphabetRecast,
+    PunctuationRecast,
+    StemmingRecast,
+    LemmatizationRecast,
+    TokenisationRecast,
+    TextRecast,
+    RecastPipeline
 )
-
 
 __all__ = [
     'urlRecast',
     'htmlRecast',
-    'EscapeSequenceRecast',
-    'MentionRecast',
+    'EscapeSequencesRecast',
+    'MentionsRecast',
     'ContractionsRecast',
     'CaseRecast',
-    'HashtagRecast',
+    'HashtagsRecast',
     'ShortWordsRecast',
     'StopWordsRecast',
     'NumberRecast',
@@ -38,6 +35,5 @@ __all__ = [
     'LemmatizationRecast',
     'TokenisationRecast',
     'TextRecast',
-    'RecastPipeline',
-    'BaseTextRecast'
+    'RecastPipeline'
 ]

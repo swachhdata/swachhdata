@@ -1,22 +1,27 @@
 import re
-import pandas
-from tqdm.auto import trange, tqdm
+
 from bs4 import BeautifulSoup
 from html import unescape
+
 import contractions
+
+import spacy
 import nltk
 nltk.download('popular', quiet=True)
-import spacy
-from gensim.parsing.preprocessing import remove_stopwords
+
 import num2words
 import unicodedata
 import string
-import json
-import textblob
 
-from ._base import TextFormatter
+import emoji
+from emoji import EMOJI_DATA
 
-class urlRecast(TextFormatter):
+from tqdm.auto import trange, tqdm
+
+from ._base import TextFormatter, BaseTextRecast
+from ..utils import probe_string_data
+
+class urlRecast(BaseTextRecast):
     """Recast text data by removing or extracting URLs.
 
     URLs supported:
@@ -86,44 +91,14 @@ class urlRecast(TextFormatter):
 
     def __init__(self, process='remove', verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__process = process
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-        self.url_ = None
+        super().__init__(process, verbose)
+        self.urls = None
         self.__regex = r'\b((?:https?://)?(?:(?:www\.)?(?:[\da-z\.-]+)\.(?:[a-z]{2,6})|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|(?:(?:[0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(?::[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(?:ffff(?::0{1,4}){0,1}:){0,1}(?:(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])))(?::[0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])?(?:/[\w\.-]*)*/?)\b'
-        self.get_regex_ = self.__regex
 
-        try:
-            assert(isinstance(self.__process, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__process)}')
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
+    @property
+    def regex(self):
+        return self.__regex
 
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -138,25 +113,21 @@ class urlRecast(TextFormatter):
             Processed text, Extracted URL
         """
 
-        if self.__process == 'remove':
-            ntext = ' '.join(re.sub('([@][A-Za-z0-9._:-]+)', ' ', text).split())
+        if self._process == 'remove':
             text = re.sub(r'\.{3}', '', text)
-            ntext = re.sub(self.__regex, '', text)
-            return ntext
+            text = re.sub(self.__regex, '', text)
+            return text
 
-        elif self.__process == 'extract':
+        elif self._process == 'extract':
             text = re.sub(r'\.{3}', '', text)
             url = re.findall(self.__regex, text)
-            self.url_ = url
             return url
 
-        elif self.__process == 'extract_remove':
+        elif self._process in ['extract_remove', 'remove_extract']:
             text = re.sub(r'\.{3}', '', text)
             url = re.findall(self.__regex, text)
-            ntext = re.sub(self.__regex, '', text)
-            self.url_ = url
-            return ntext, url
-
+            text = re.sub(self.__regex, '', text)
+            return text, url
 
     def recast(self):
         """Perform selected process on the setup text
@@ -169,58 +140,26 @@ class urlRecast(TextFormatter):
             Extracted URLs
         ntext, url : string / list of strings (process='extract_remove')
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if self._dtype == str:
-            return self.__base_recast(self._text)
+        super().recast()
 
-        elif self._dtype == list:
+        if self._process in ['remove', 'extract', 'extract_remove', 'remove_extract']:
+            data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+            data_tqdm.set_postfix({'urlRecast process': self._process})
 
-            if self.__verbose == 0:
+        if self._process in ['remove', 'extract']:
+            recast_text = [self.__base_recast(text) for text in data_tqdm]
+            if self._process == 'extract':
+                self.urls = recast_text
+            return recast_text
 
-                if self.__process == 'remove' or self.__process == 'extract':
-                    ntext = []
-                    for text in self._text:
-                        ntext.append(self.__base_recast(text))
-                    return ntext
-
-                elif self.__process == 'extract_remove':
-                    ntext, urls = [], []
-                    for text in self._text:
-                        text, url = self.__base_recast(text)
-                        ntext.append(text)
-                        urls.append(url)
-                    self.url_ = urls
-                    return ntext, urls
-                    
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                if self.__process == 'remove' or self.__process == 'extract':
-                    ntext = []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'urlRecast process': self.__process})
-                        text = self._text[i]
-                        ntext.append(self.__base_recast(text))
-                    return ntext
-
-                elif self.__process == 'extract_remove':
-                    ntext, urls = [], []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'urlRecast process': self.__process})
-                        text = self._text[i]
-                        text, url = self.__base_recast(text)
-                        ntext.append(text)
-                        urls.append(url)
-                    self.url_ = urls
-                    return ntext, urls
-
+        elif self._process in ['extract_remove', 'remove_extract']:
+            recast_text, urls = [], []
+            for text in data_tqdm:
+                text, url = self.__base_recast(text)
+                recast_text.append(text)
+                urls.append(url)
+            self.urls = urls
+            return recast_text, urls
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -240,15 +179,17 @@ class urlRecast(TextFormatter):
         ntext, url : string / list of strings, list of strings (process='extract_remove')
             Processed text, Extracted URLs
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class htmlRecast(TextFormatter):
+class htmlRecast(BaseTextRecast):
     """Recast text data by removing HTML tags.
 
     uses lxml from BeautifulSoup to clean up html tags
@@ -273,35 +214,7 @@ class htmlRecast(TextFormatter):
 
     def __init__(self, verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
+        super().__init__(verbose=verbose)
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -311,11 +224,9 @@ class htmlRecast(TextFormatter):
         ntext : string
             Processed text
         """
-
         soup = BeautifulSoup(unescape(text), 'lxml')
-        ntext = soup.get_text()
-        return ntext
-
+        text = soup.get_text()
+        return text
 
     def recast(self):
         """Perform selected process on the setup text
@@ -325,35 +236,12 @@ class htmlRecast(TextFormatter):
         ntext : string / list of strings 
             Processed text
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if self._dtype == str:
+        super().recast()
 
-            return self.__base_recast(self._text)
-
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    ntext.append(self.__base_recast(text))
-                return ntext
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({'htmlRecast process': 'removing'})
-                    text = self._text[i]
-                    ntext.append(self.__base_recast(text))
-                return ntext
-
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({'htmlRecast process': 'remove'})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
+        return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -369,15 +257,17 @@ class htmlRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class EscapeSequenceRecast(TextFormatter):
+class EscapeSequencesRecast(TextFormatter):
     """Recast text data by removing Escape Sequences.
 
     Parameters
@@ -412,24 +302,6 @@ class EscapeSequenceRecast(TextFormatter):
             assert(isinstance(self.__verbose, int))
         except:
             print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -504,7 +376,7 @@ class EscapeSequenceRecast(TextFormatter):
 ##############################################################################################################
 
 
-class MentionRecast(TextFormatter):
+class MentionsRecast(BaseTextRecast):
     """Recast text data by removing or extracting Mentions.
 
     Mentions supported:
@@ -570,137 +442,69 @@ class MentionRecast(TextFormatter):
 
     def __init__(self, process='remove', verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__process = process
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-        self.mention_ = None
+        super().__init__(process, verbose)
         self.__regex = '([@][A-Za-z0-9._:-]+)'
-        self.get_regex_ = self.__regex
 
-        try:
-            assert(isinstance(self.__process, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__process)}')
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
+    @property
+    def regex(self):
+        return self.__regex
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
 
         Returns
         -------
-        ntext : string (process='remove')
+        text : string (process='remove')
             Processed text
         mention : list of strings (process='extract')
             Extracted Mention(s)
-        ntext, mention : string, list of strings (process='extract_remove')
+        text, mention : string, list of strings (process='extract_remove')
             Processed text, Extracted Mention(s)
         """
-
-        if self.__process == 'remove':
+        if self._process == 'remove':
             return ' '.join(re.sub(self.__regex, ' ', text).split())
 
-        elif self.__process == 'extract':
+        elif self._process == 'extract':
             mention = re.findall(self.__regex, text)
-            self.mention_ = mention
             return mention
 
-        elif self.__process == 'extract_remove':
+        elif self._process in ['extract_remove', 'remove_extract']:
             mention = re.findall(self.__regex, text)
-            ntext = ' '.join(re.sub(self.__regex, ' ', text).split())
-            self.mention_ = mention
-            return ntext, mention
-
+            text = ' '.join(re.sub(self.__regex, ' ', text).split())
+            return text, mention
 
     def recast(self):
         """Perform selected process on the setup text
 
         Returns
         -------
-        ntext : string / list of strings (process='remove')
+        text : string / list of strings (process='remove')
             Processed text
         mention : list of strings (process='extract')
             Extracted Mention(s)
-        ntext, mention : string / list of strings (process='extract_remove')
+        text, mention : string / list of strings (process='extract_remove')
             Processed text, Extracted Mention(s)
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if self._dtype == str:
-            return self.__base_recast(self._text)
+        super().recast()
 
-        elif self._dtype == list:
+        if self._process in ['remove', 'extract', 'extract_remove', 'remove_extract']:
+            data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+            data_tqdm.set_postfix({'MentionRecast process': self._process})
 
-            if self.__verbose == 0:
+        if self._process in ['remove', 'extract']:
+            recast_text = [self.__base_recast(text) for text in data_tqdm]
+            if self._process == 'extract':
+                self.mentions = recast_text
+            return recast_text
 
-                if self.__process == 'remove' or self.__process == 'extract':
-                    ntext = []
-                    for text in self._text:
-                        ntext.append(self.__base_recast(text))
-                    return ntext
-
-                elif self.__process == 'extract_remove':
-                    ntext, mentions = [], []
-                    for text in self._text:
-                        text, mention = self.__base_recast(text)
-                        ntext.append(text)
-                        mentions.append(mention)
-                    self.mention_ = mentions
-                    return ntext, mentions
-                    
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                if self.__process == 'remove' or self.__process == 'extract':
-                    ntext = []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'MentionRecast process': self.__process})
-                        text = self._text[i]
-                        ntext.append(self.__base_recast(text))
-                    return ntext
-
-                elif self.__process == 'extract_remove':
-                    ntext, mentions = [], []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'MentionRecast process': self.__process})
-                        text = self._text[i]
-                        text, mention = self.__base_recast(text)
-                        ntext.append(text)
-                        mentions.append(mention)
-                    self.mention_ = mentions
-                    return ntext, mentions
-
+        elif self._process in ['extract_remove', 'remove_extract']:
+            recast_text, mentions = [], []
+            for text in data_tqdm:
+                text, mention = self.__base_recast(text)
+                recast_text.append(text)
+                mentions.append(mention)
+            self.mentions = mentions
+            return recast_text, mentions
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -713,22 +517,23 @@ class MentionRecast(TextFormatter):
 
         Returns
         -------
-        ntext : string / list of strings (process='remove')
+        text : string / list of strings (process='remove')
             Processed text
-        mention : string / list of strings (process='extract')
+        mentions : string / list of strings (process='extract')
             Extracted Mention(s)
-        ntext, mention : string / list of strings, list of strings (process='extract_remove')
+        text, mentions : string / list of strings, list of strings (process='extract_remove')
             Processed text, Extracted Mention(s)
         """
-
-        self.setup(text)
-        return self.recast()
-
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 ##############################################################################################################
 
 
-class ContractionsRecast(TextFormatter):
+class ContractionsRecast(BaseTextRecast):
     """Recast text data by expanding Contractions
     
     Parameters
@@ -749,52 +554,20 @@ class ContractionsRecast(TextFormatter):
     >>> rec.setup_recast(text)
     'They are going to wildlife sanctuary, I guess Jon is going to be there too.'
     """
-
-
     def __init__(self, verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
+        super().__init__(verbose=verbose)
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
 
         Returns
         -------
-        ntext : string
+        text : string
             Processed text
         """
-
-        ntext = contractions.fix(text)
-        return ntext
-
+        text = contractions.fix(text)
+        return text
 
     def recast(self):
         """Perform selected process on the setup text
@@ -804,35 +577,12 @@ class ContractionsRecast(TextFormatter):
         ntext : string / list of strings 
             Processed text
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if self._dtype == str:
+        super().recast()
 
-            return self.__base_recast(self._text)
-
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    ntext.append(self.__base_recast(text))
-                return ntext
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({'ContractionsRecast process': 'mapping Contractions'})
-                    text = self._text[i]
-                    ntext.append(self.__base_recast(text))
-                return ntext
-
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({'ContractionsRecast process': 'remove'})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
+        return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -848,21 +598,22 @@ class ContractionsRecast(TextFormatter):
         ntext : string / list of strings (process='remove')
             Processed text
         """
-
-        self.setup(text)
-        return self.recast()
-
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 ##############################################################################################################
 
 
-class CaseRecast(TextFormatter):
+class CaseRecast(BaseTextRecast):
     """Recast text data by case formatting the text
 
     Case formats supported:
         * UPPER case (upper)
         * lower case (lower)
-        * First Upper case (fupper)
+        * Title (fupper / title / proper)
     
     Parameters
     ----------
@@ -908,64 +659,28 @@ class CaseRecast(TextFormatter):
 
     def __init__(self, process='lower', verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__process = process
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
+        super().__init__(process, verbose)
 
-        try:
-            assert(isinstance(self.__process, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__process)}')
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
-    
     def __base_recast(self, text):
         """Perform selected process on the setup text
 
         Returns
         -------
-        ntext : string (process='remove')
+        text : string (process='remove')
             Processed text
         rec : list of strings (process='extract')
             Extracted rec
-        ntext, rec : string, list of strings (process='extract_remove')
+        text, rec : string, list of strings (process='extract_remove')
             Processed text, Extracted rec
         """
-
-        if self.__process == 'lower':
+        if self._process == 'lower':
             return text.lower()
 
-        elif self.__process == 'upper':
+        elif self._process == 'upper':
             return text.upper()
     
-        elif self.__process == 'fupper':
+        elif self._process in ['fupper', 'title', 'proper']:
             return text.title()
-
 
     def recast(self):
         """Perform selected process on the setup text
@@ -975,34 +690,12 @@ class CaseRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if self._dtype == str:
-            return self.__base_recast(self._text)
+        super().recast()
 
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    ntext.append(self.__base_recast(text))
-                return ntext
-                    
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({'CaseRecast process': self.__process})
-                    text = self._text[i]
-                    ntext.append(self.__base_recast(text))
-                return ntext
-
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({'CaseRecast process': self._process})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
+        return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -1018,282 +711,215 @@ class CaseRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-
-        self.setup(text)
-        return self.recast()
-
-
-##############################################################################################################
-
-
-# class EmojiRecast(TextFormatter):
-#     """Recast text data by removing, replaing or extracting Emoji(s).
-    
-#     Parameters
-#     ----------
-#     process: string ('remove', 'replace', 'extract', 'extract_remove', 'extract_replace'), default='remove'
-#     space_out = bool (True, False), default=False
-#     verbose: int (0, 1, -1), default=0
-
-#     Attributes
-#     ----------
-#     emoji_ : list of emoji(s)
-#         extracted emoji(s)
-    
-
-#     Examples
-#     --------
-#     >>> # process='remove'
-#     >>> from swachhdata.text import EmojiRecast
-#     >>> text = 'Thanks a lot for your wishes! 😊'
-#     >>> rec = EmojiRecast(process='remove')
-#     >>> rec.setup(text)
-#     >>> rec.recast()
-#     'Thanks a lot for your wishes!'
-#     >>> # OR
-#     >>> rec.setup_recast(text)
-#     'Thanks a lot for your wishes!'
-#     >>> 
-#     >>> # process='replace'
-#     >>> from swachhdata.text import EmojiRecast
-#     >>> text = 'Thanks a lot for your wishes! 😊'
-#     >>> rec = EmojiRecast(process='replace')
-#     >>> rec.setup(text)
-#     >>> rec.recast()
-#     'Thanks a lot for your wishes! smiling_face_with_smiling_eyes '
-#     >>> # OR
-#     >>> rec.setup_recast(text)
-#     'Thanks a lot for your wishes! smiling_face_with_smiling_eyes '
-#     >>> 
-#     >>> # process='extract'
-#     >>> from swachhdata.text import EmojiRecast
-#     >>> text = 'Thanks a lot for your wishes! 😊'
-#     >>> rec = EmojiRecast(process='extract')
-#     >>> rec.setup(text)
-#     >>> rec.recast()
-#     ['😊']
-#     >>> # OR
-#     >>> rec.setup_recast(text)
-#     ['😊']
-#     >>> # process='extract_remove'
-#     >>> from swachhdata.text import EmojiRecast
-#     >>> text = 'Thanks a lot for your wishes! 😊'
-#     >>> rec = EmojiRecast(process='extract_remove')
-#     >>> rec.setup(text)
-#     >>> rec.recast()
-#     'Thanks a lot for your wishes!'
-#     ['😊']
-#     >>> # OR
-#     >>> rec.setup_recast(text)
-#     'Thanks a lot for your wishes!'
-#     ['😊']
-#     >>> # process='extract_replace'
-#     >>> from swachhdata.text import EmojiRecast
-#     >>> text = 'Thanks a lot for your wishes! 😊'
-#     >>> rec = EmojiRecast(process='extract_replace')
-#     >>> rec.setup(text)
-#     >>> rec.recast()
-#     'Thanks a lot for your wishes! smiling_face_with_smiling_eyes'
-#     ['😊']
-#     >>> # OR
-#     >>> rec.setup_recast(text)
-#     'Thanks a lot for your wishes! smiling_face_with_smiling_eyes'
-#     ['😊']
-#     """
-
-#     def __init__(self, process='remove', space_out=False, verbose=0):
-
-#         TextFormatter.__init__(self)
-#         self.__setup = False
-#         self.__process = process
-#         self.__space_out = space_out
-#         self.__verbose_status = True
-#         self.__verbose = verbose
-#         if self.__verbose == -1:
-#             self.__verbose_status = False
-#         self.emoji_ = None
-#         self.__emojis_list = list(UNICODE_EMOJI['en'].keys()) + list(UNICODE_EMOJI['es'].keys()) + list(UNICODE_EMOJI['pt'].keys()) + list(UNICODE_EMOJI['it'].keys())
-
-#         try:
-#             assert(isinstance(self.__process, str))
-#         except:
-#             print(f'Expected process input type <class \'str\'>, input type received {type(self.__process)}')
-        
-#         try:
-#             assert(isinstance(self.__verbose, int))
-#         except:
-#             print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-#     def setup(self, text):
-#         """Change the input text type to supported type
-#         Parameters
-#         ----------
-#         text : string / list of strings / pandas.core.series.Series
-
-#         Returns
-#         -------
-#         self : object
-#         """
-
-#         self._dtype = type(text)
-#         self._text = text
-#         self._TextFormatter__text_formatter()
-#         self.__setup = True
-    
-    
-#     def __base_recast(self, text):
-#         """Perform selected process on the setup text
-
-#         Parameters
-#         ----------
-#         text : string / pandas.core.series.Series
-
-#         Returns
-#         -------
-#         ntext : string (process='remove' / process='replace')
-#             Processed text
-#         emoji : list of strings (process='extract')
-#             Extracted Emojis
-#         ntext, emoji : string, list of strings (process='extract_remove' / process='extract_replace')
-#             Processed text, Extracted Emojis
-#         """
-#         if self.__space_out:
-#             spaced = ''
-#             for char in text:
-#                 if char in self.__emojis_list:
-#                     spaced += ' '
-#                 spaced += char
-#             text = spaced
-#             text = re.sub(' +', ' ', text)
-        
-#         if self.__process == 'remove':
-#             allchars = [str for str in text]
-#             emoji_list = [c for c in allchars if c in self.__emojis_list]
-#             text = ' '.join([str for str in text.split() if not any(j in str for j in emoji_list)])
-#             return text
-
-#         elif self.__process == 'replace':
-#             text = emoji.demojize(text, delimiters=('', ''))
-#             return text
-
-#         elif self.__process == 'extract':
-#             allchars = [str for str in text]
-#             emoji_list = [c for c in allchars if c in self.__emojis_list]
-#             self.emoji_ = emoji_list
-#             return emoji_list
-        
-#         elif self.__process == 'extract_remove':
-#             allchars = [str for str in text]
-#             emoji_list = [c for c in allchars if c in self.__emojis_list]
-#             text = ' '.join([str for str in text.split() if not any(j in str for j in emoji_list)])
-#             self.emoji_ = emoji_list
-#             return text, emoji_list
-        
-#         elif self.__process == 'extract_replace':
-#             allchars = [str for str in text]
-#             emoji_list = [c for c in allchars if c in self.__emojis_list]
-#             text = emoji.demojize(text, delimiters=('', ''))
-#             self.emoji_ = emoji_list
-#             return text, emoji_list
-
-
-#     def recast(self):
-#         """
-#         Perform selected process on the setup text
-
-#         Returns
-#         -------
-#         ntext : string / list of strings (process='remove' / process='replace')
-#             Processed text
-#         emoji : string / list of strings (process='extract')
-#             Extracted Emojis
-#         ntext, emoji : string / list of strings, list of strings (process='extract_remove' / process='extract_replace')
-#             Processed text, Extracted Emojis
-#         """
-        
-#         try:
-#             assert(self.__setup)
-#         except:
-#             print(f'method setup needs to be called before recast')
-        
-#         if self._dtype == str:
-#             return self.__base_recast(self._text)
-
-#         elif self._dtype == list:
-
-#             if self.__verbose == 0:
-
-#                 if self.__process in ['remove', 'replace', 'extract']:
-#                     ntext = []
-#                     for text in self._text:
-#                         ntext.append(self.__base_recast(text))
-#                     return ntext
-
-#                 elif self.__process in ['extract_remove', 'extract_replace']:
-#                     ntext, emoji_list = [], []
-#                     for text in self._text:
-#                         text, emoji = self.__base_recast(text)
-#                         ntext.append(text)
-#                         emoji_list.append(emoji)
-#                     self.url_ = emoji_list
-#                     return ntext, emoji_list
-                    
-            
-#             if self.__verbose == 1 or self.__verbose == -1:
-
-#                 if self.__process in ['remove', 'replace', 'extract']:
-#                     ntext = []
-#                     progress_bar = trange(self._count, leave=self.__verbose_status)
-#                     for i in progress_bar:
-#                         progress_bar.set_postfix({'EmojiRecast process': self.__process})
-#                         text = self._text[i]
-#                         ntext.append(self.__base_recast(text))
-#                     return ntext
-
-#                 elif self.__process in ['extract_remove', 'extract_replace']:
-#                     ntext, emoji_list = [], []
-#                     progress_bar = trange(self._count, leave=self.__verbose_status)
-#                     for i in progress_bar:
-#                         progress_bar.set_postfix({'EmojiRecast process': self.__process})
-#                         text = self._text[i]
-#                         text, emoji = self.__base_recast(text)
-#                         ntext.append(text)
-#                         emoji_list.append(emoji)
-#                     self.url_ = emoji_list
-#                     return ntext, emoji_list
-
-
-#     def setup_recast(self, text):
-#         """Change the input text type to supported type
-#         and
-#         Perform selected process on the setup text
-
-#         Parameters
-#         ----------
-#         text : string / list of strings / pandas.core.series.Series
-
-#         Returns
-#         -------
-#         ntext : string / list of strings (process='remove' / process='replace')
-#             Processed text
-#         emoji : string / list of strings (process='extract')
-#             Extracted Emojis
-#         ntext, emoji : string / list of strings, list of strings (process='extract_remove' / process='extract_replace')
-#             Processed text, Extracted Emojis
-#         """
-
-#         self.setup(text)
-#         return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class HashtagRecast(TextFormatter):
+class EmojiRecast(BaseTextRecast):
+    """Recast text data by removing, replaing or extracting Emoji(s).
+    
+    Parameters
+    ----------
+    process: string ('remove', 'replace', 'extract', 'extract_remove', 'extract_replace'), default='remove'
+    space_out = bool (True, False), default=False
+    verbose: int (0, 1, -1), default=0
+
+    Attributes
+    ----------
+    emoji : list of emoji(s)
+        extracted emoji(s)
+
+    Examples
+    --------
+    >>> # process='remove'
+    >>> from swachhdata.text import EmojiRecast
+    >>> text = 'Thanks a lot for your wishes! 😊'
+    >>> rec = EmojiRecast(process='remove')
+    >>> rec.setup(text)
+    >>> rec.recast()
+    'Thanks a lot for your wishes!'
+    >>> # OR
+    >>> rec.setup_recast(text)
+    'Thanks a lot for your wishes!'
+    >>> 
+    >>> # process='replace'
+    >>> from swachhdata.text import EmojiRecast
+    >>> text = 'Thanks a lot for your wishes! 😊'
+    >>> rec = EmojiRecast(process='replace')
+    >>> rec.setup(text)
+    >>> rec.recast()
+    'Thanks a lot for your wishes! smiling_face_with_smiling_eyes '
+    >>> # OR
+    >>> rec.setup_recast(text)
+    'Thanks a lot for your wishes! smiling_face_with_smiling_eyes '
+    >>> 
+    >>> # process='extract'
+    >>> from swachhdata.text import EmojiRecast
+    >>> text = 'Thanks a lot for your wishes! 😊'
+    >>> rec = EmojiRecast(process='extract')
+    >>> rec.setup(text)
+    >>> rec.recast()
+    ['😊']
+    >>> # OR
+    >>> rec.setup_recast(text)
+    ['😊']
+    >>> # process='extract_remove'
+    >>> from swachhdata.text import EmojiRecast
+    >>> text = 'Thanks a lot for your wishes! 😊'
+    >>> rec = EmojiRecast(process='extract_remove')
+    >>> rec.setup(text)
+    >>> rec.recast()
+    'Thanks a lot for your wishes!'
+    ['😊']
+    >>> # OR
+    >>> rec.setup_recast(text)
+    'Thanks a lot for your wishes!'
+    ['😊']
+    >>> # process='extract_replace'
+    >>> from swachhdata.text import EmojiRecast
+    >>> text = 'Thanks a lot for your wishes! 😊'
+    >>> rec = EmojiRecast(process='extract_replace')
+    >>> rec.setup(text)
+    >>> rec.recast()
+    'Thanks a lot for your wishes! smiling_face_with_smiling_eyes'
+    ['😊']
+    >>> # OR
+    >>> rec.setup_recast(text)
+    'Thanks a lot for your wishes! smiling_face_with_smiling_eyes'
+    ['😊']
+    """
+
+    def __init__(self, process='remove', space_out=False, verbose=0):
+
+        super().__init__(process, verbose)
+        self._space_out = space_out
+        self.emojis = None
+        self._emoji_list = list(EMOJI_DATA.keys())
+
+    def __base_recast(self, text):
+        """Perform selected process on the setup text
+
+        Parameters
+        ----------
+        text : string / pandas.core.series.Series
+
+        Returns
+        -------
+        ntext : string (process='remove' / process='replace')
+            Processed text
+        emoji : list of strings (process='extract')
+            Extracted Emojis
+        ntext, emoji : string, list of strings (process='extract_remove' / process='extract_replace')
+            Processed text, Extracted Emojis
+        """
+        if self._space_out:
+            spaced = ''
+            for char in text:
+                if char in self._emoji_list:
+                    spaced += ' '
+                spaced += char
+            text = spaced
+            text = re.sub(' +', ' ', text)
+        
+        if self._process == 'remove':
+            allchars = [str for str in text]
+            emoji_list = [c for c in allchars if c in self._emoji_list]
+            text = ' '.join([str for str in text.split() if not any(j in str for j in emoji_list)])
+            return text
+
+        elif self._process == 'replace':
+            text = emoji.demojize(text, delimiters=('', ''))
+            return text
+
+        elif self._process == 'extract':
+            allchars = [str for str in text]
+            emoji_list = [c for c in allchars if c in self._emoji_list]
+            return emoji_list
+        
+        elif self._process in ['extract_remove', 'remove_extract']:
+            allchars = [str for str in text]
+            emoji_list = [c for c in allchars if c in self._emoji_list]
+            text = ' '.join([str for str in text.split() if not any(j in str for j in emoji_list)])
+            return text, emoji_list
+        
+        elif self._process in ['extract_replace', 'replace_extract']:
+            allchars = [str for str in text]
+            emoji_list = [c for c in allchars if c in self._emoji_list]
+            text = emoji.demojize(text, delimiters=('', ''))
+            return text, emoji_list
+
+    def recast(self):
+        """
+        Perform selected process on the setup text
+
+        Returns
+        -------
+        ntext : string / list of strings (process='remove' / process='replace')
+            Processed text
+        emoji : string / list of strings (process='extract')
+            Extracted Emojis
+        ntext, emoji : string / list of strings, list of strings (process='extract_remove' / process='extract_replace')
+            Processed text, Extracted Emojis
+        """
+        super().recast()
+
+        if self._process in ['remove', 'extract', 'replace', 'extract_remove', 'remove_extract', 'extract_replace', 'replace_extract']:
+            data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+            data_tqdm.set_postfix({'EmojiRecast process': self._process})
+
+        if self._process in ['remove', 'extract', 'replace']:
+            recast_text = [self.__base_recast(text) for text in data_tqdm]
+            if self._process == 'extract':
+                self.emojis = recast_text
+            return recast_text
+
+        elif self._process in ['extract_remove', 'remove_extract', 'extract_replace', 'replace_extract']:
+            recast_text, emojis = [], []
+            for text in data_tqdm:
+                text, emoji = self.__base_recast(text)
+                recast_text.append(text)
+                emojis.append(emoji)
+            self.emojis = emojis
+            return recast_text, emojis
+
+    def setup_recast(self, text):
+        """Change the input text type to supported type
+        and
+        Perform selected process on the setup text
+
+        Parameters
+        ----------
+        text : string / list of strings / pandas.core.series.Series
+
+        Returns
+        -------
+        ntext : string / list of strings (process='remove' / process='replace')
+            Processed text
+        emoji : string / list of strings (process='extract')
+            Extracted Emojis
+        ntext, emoji : string / list of strings, list of strings (process='extract_remove' / process='extract_replace')
+            Processed text, Extracted Emojis
+        """
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
+
+
+##############################################################################################################
+
+
+class HashtagsRecast(BaseTextRecast):
     """Recast text data by removing or extracting Hashtag(s).
 
-    Hashtags supported:
+     supported:
         * #sample_website
         * #sample_website123
         * #123sample_website
@@ -1309,10 +935,9 @@ class HashtagRecast(TextFormatter):
     get_regex_ : string
         regex being used by recast
 
-    hashtag_ : list of string(s)
+    hashtags : list of string(s)
         extracted hashtag(s)
     
-
     Examples
     --------
     >>> # process='remove'
@@ -1353,44 +978,13 @@ class HashtagRecast(TextFormatter):
 
     def __init__(self, process='remove', verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__process = process
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-        self.hashtag_ = None
+        super().__init__(process, verbose)
+        self.hashtags = None
         self.__regex = '([#][A-Za-z0-9_]+)'
-        self.get_regex_ = self.__regex
-
-        try:
-            assert(isinstance(self.__process, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__process)}')
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
     
+    @property
+    def regex(self):
+        return self.__regex
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -1405,19 +999,17 @@ class HashtagRecast(TextFormatter):
             Processed text, Extracted Hashtag(s)
         """
 
-        if self.__process == 'remove':
+        if self._process == 'remove':
             text = ' '.join(re.sub('([#][A-Za-z0-9_]+)', ' ', text).split())
             return text
 
-        elif self.__process == 'extract':
+        elif self._process == 'extract':
             hashtag = re.findall('([#][A-Za-z0-9_]+)', text)
-            self.hashtag_ = hashtag
             return hashtag
 
-        elif self.__process == 'extract_remove':
+        elif self._process in ['extract_remove', 'remove_extract']:
             hashtag = re.findall('([#][A-Za-z0-9_]+)', text)
             text = ' '.join(re.sub('([#][A-Za-z0-9_]+)', ' ', text).split())
-            self.hashtag_ = hashtag
             return text, hashtag
 
 
@@ -1433,58 +1025,26 @@ class HashtagRecast(TextFormatter):
         ntext, hashtag : string / list of strings (process='extract_remove')
             Processed text, Extracted Hashtag(s)
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if self._dtype == str:
-            return self.__base_recast(self._text)
+        super().recast()
 
-        elif self._dtype == list:
+        if self._process in ['remove', 'extract', 'extract_remove', 'remove_extract']:
+            data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+            data_tqdm.set_postfix({'HashtagsRecast process': self._process})
 
-            if self.__verbose == 0:
+        if self._process in ['remove', 'extract']:
+            recast_text = [self.__base_recast(text) for text in data_tqdm]
+            if self._process == 'extract':
+                self.hashtags = recast_text
+            return recast_text
 
-                if self.__process == 'remove' or self.__process == 'extract':
-                    ntext = []
-                    for text in self._text:
-                        ntext.append(self.__base_recast(text))
-                    return ntext
-
-                elif self.__process == 'extract_remove':
-                    ntext, hashtags = [], []
-                    for text in self._text:
-                        text, hashtag = self.__base_recast(text)
-                        ntext.append(text)
-                        hashtags.append(hashtag)
-                        self.hashtags_ = hashtags
-                    return ntext, hashtags
-                    
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                if self.__process == 'remove' or self.__process == 'extract':
-                    ntext = []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'HashtagRecast process': self.__process})
-                        text = self._text[i]
-                        ntext.append(self.__base_recast(text))
-                    return ntext
-
-                elif self.__process == 'extract_remove':
-                    ntext, hashtags = [], []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'HashtagRecast process': self.__process})
-                        text = self._text[i]
-                        text, hashtag = self.__base_recast(text)
-                        ntext.append(text)
-                        hashtags.append(hashtag)
-                        self.hashtags_ = hashtags
-                    return ntext, hashtags
-
+        elif self._process in ['extract_remove', 'remove_extract']:
+            recast_text, hashtags = [], []
+            for text in data_tqdm:
+                text, hashtag = self.__base_recast(text)
+                recast_text.append(text)
+                hashtags.append(hashtag)
+            self.hashtags = hashtags
+            return recast_text, hashtags
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -1504,15 +1064,17 @@ class HashtagRecast(TextFormatter):
         ntext, hashtag : string / list of strings, list of strings (process='extract_remove')
             Processed text, Extracted Hashtag(s)
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class ShortWordsRecast(TextFormatter):
+class ShortWordsRecast(BaseTextRecast):
     """Recast text data by removing (short) words of specified length.
     
     Parameters
@@ -1537,41 +1099,9 @@ class ShortWordsRecast(TextFormatter):
 
     def __init__(self, min_length=3, verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__min_length = min_length
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
+        super().__init__(verbose=verbose)
+        self._min_length = min_length
 
-        try:
-            assert(isinstance(self.__min_length, int))
-        except:
-            print(f'Expected min_length input type <class \'int\'>, input type received {type(self.__min_length)}')
-
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -1581,14 +1111,9 @@ class ShortWordsRecast(TextFormatter):
         ntext : string
             Processed text
         """
-
-        ntext = []
-        for word in text.split():
-            if len(word) > self.__min_length:
-                ntext.append(word)
-        ntext = ' '.join(ntext)
-        return ntext
-
+        ntext = [word for word in text.split() if len(word) > self._min_length]
+        text = ' '.join(ntext)
+        return text
 
     def recast(self):
         """Perform selected process on the setup text
@@ -1598,35 +1123,11 @@ class ShortWordsRecast(TextFormatter):
         ntext : string / list of strings 
             Processed text
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if self._dtype == str:
-
-            return self.__base_recast(self._text)
-
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    ntext.append(self.__base_recast(text))
-                return ntext
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({'ShortWordsRecast [removing] min_length': self.__min_length})
-                    text = self._text[i]
-                    ntext.append(self.__base_recast(text))
-                return ntext
-
+        super().recast()
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({f'ShortWordsRecast [min_length = {self._min_length}] process': 'remove'})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
+        return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -1643,14 +1144,17 @@ class ShortWordsRecast(TextFormatter):
             Processed text
         """
 
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class StopWordsRecast(TextFormatter):
+class StopWordsRecast(BaseTextRecast):
     """Recast text data by removing stop words.
     
     Parameters
@@ -1675,60 +1179,22 @@ class StopWordsRecast(TextFormatter):
 
     def __init__(self, package='nltk', stopwords=None, verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__package = package
-        self.__stopWords = None
-        self.__verbose_status = True
-        self.__verbose = verbose
-
-        if self.__verbose == -1:
-            self.__verbose_status = False
-
-        if self.__package == 'custom':
-            self.__stopWords = stopwords
-            try:
-                assert(isinstance(self.__stopWords, list))
-            except:
-                print(f'Expected stopWords input type <class \'list\'>, input type received {type(self.__stopWords)}')
-
-        try:
-            assert(isinstance(self.__package, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__package)}')
+        if package == 'custom':
+            probe_string_data(stopwords)
         
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
+        super().__init__(verbose=verbose)
+        self._package = package
+        self._stopWords = stopwords
     
     def __setup_package(self):
 
-        if self.__package == 'nltk':
+        if self._package == 'nltk':
             from nltk.corpus import stopwords
-            self.__stopWords = set(stopwords.words('english'))
+            self._stopWords = set(stopwords.words('english'))
 
-        elif self.__package == 'spacy':
+        elif self._package == 'spacy':
             sp = spacy.load('en_core_web_sm')
-            self.__stopWords = sp.Defaults.stop_words
-
+            self._stopWords = sp.Defaults.stop_words
 
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -1738,35 +1204,9 @@ class StopWordsRecast(TextFormatter):
         ntext : string
             Processed text
         """
-
-        if self.__package == 'nltk':
-            ntext = []
-            for word in text.split():
-                if word not in self.__stopWords:
-                    ntext.append(word)
-            ntext = ' '.join(ntext)
-            return ntext
-
-        elif self.__package == 'spacy':
-            ntext = []
-            for word in text.split():
-                if word not in self.__stopWords:
-                    ntext.append(word)
-            ntext = ' '.join(ntext)
-            return ntext
-
-        elif self.__package == 'gensim':
-            text = remove_stopwords(text)
-            return text
-        
-        elif self.__package == 'custom':
-            ntext = []
-            for word in text.split():
-                if word not in self.__stopWords:
-                    ntext.append(word)
-            ntext = ' '.join(ntext)
-            return ntext
-
+        ntext = [word for word in text.split() if word not in self._stopWords]
+        text = ' '.join(ntext)
+        return text
 
     def recast(self):
         """Perform selected process on the setup text
@@ -1776,38 +1216,13 @@ class StopWordsRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
+        super().recast()
         self.__setup_package()
 
-        if self._dtype == str:
-            return self.__base_recast(self._text)
-
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    text = self.__base_recast(text)
-                    ntext.append(text)
-                return ntext
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({f'StopWordsRecast [removing] package': self.__package})
-                    text = self._text[i]
-                    text = self.__base_recast(text)
-                    ntext.append(text)
-                return ntext
-
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({f'StopWordsRecast [package={self._package}] process': 'remove'})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
+        return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -1823,15 +1238,17 @@ class StopWordsRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class NumberRecast(TextFormatter):
+class NumberRecast(BaseTextRecast):
     """Recast text data by removing, replacing or extracting numbers.
 
     Number formats supported:
@@ -1848,7 +1265,7 @@ class NumberRecast(TextFormatter):
 
     Attributes
     ----------
-    number_ : list of number(s)
+    numbers : list of number(s)
         extracted number(s)
     
 
@@ -1914,43 +1331,9 @@ class NumberRecast(TextFormatter):
 
     def __init__(self, process='remove', seperator=None, verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__process = process
-        self.__seperator = seperator
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-        self.number_ = None
-
-        try:
-            assert(isinstance(self.__process, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__process)}')
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
+        super().__init__(process, verbose)
+        self._seperator = seperator
+        self.numbers = None
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -1964,30 +1347,30 @@ class NumberRecast(TextFormatter):
         ntext, number : string, list of strings (process='extract_remove' / process='extract_replace')
             Processed text, Extracted Number(s)
         """
-        if self.__seperator == ',':
+        if self._seperator == ',':
             text = re.sub(r'(?<!\B)[,](?!\B)', '', text)
         
-        if self.__seperator == '.':
+        elif self._seperator == '.':
             text = re.sub(r'(?<!\B)[.](?!\B)', '', text)
         
-        if self.__process == 'remove':
+        if self._process == 'remove':
             return re.sub(r'[0-9]+', '', text, 0)
 
-        elif self.__process == 'replace':
+        elif self._process == 'replace':
             return re.sub(r'(\d+)', lambda x: num2words.num2words(int(x.group(0))), text, 0)
 
-        elif self.__process == 'extract':
+        elif self._process == 'extract':
             return re.findall(r'[0-9]+', text, 0)
         
-        elif self.__process == 'extract_remove':
-            self.number_ = re.findall(r'[0-9]+', text, 0)
+        elif self._process in ['extract_remove', 'remove_extract']:
+            numbers = re.findall(r'[0-9]+', text, 0)
             text = re.sub(r'[0-9]+', '', text, 0)
-            return text, self.number_
+            return text, numbers
         
-        elif self.__process == 'extract_replace':
-            self.number_ = re.findall(r'[0-9]+', text, 0)
+        elif self._process in ['extract_replace', 'replace_extract']:
+            numbers = re.findall(r'[0-9]+', text, 0)
             text = re.sub(r'(\d+)', lambda x: num2words.num2words(int(x.group(0))), text, 0)
-            return text, self.number_
+            return text, numbers
 
 
     def recast(self):
@@ -2002,58 +1385,26 @@ class NumberRecast(TextFormatter):
         ntext, number : string, list of strings (process='extract_remove' / process='extract_replace')
             Processed text, Extracted Number(s)
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if self._dtype == str:
-            return self.__base_recast(self._text)
+        super().recast()
 
-        elif self._dtype == list:
+        if self._process in ['remove', 'extract', 'replace', 'extract_remove', 'remove_extract', 'extract_replace', 'replace_extract']:
+            data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+            data_tqdm.set_postfix({'NumberRecast process': self._process})
 
-            if self.__verbose == 0:
+        if self._process in ['remove', 'extract', 'replace']:
+            recast_text = [self.__base_recast(text) for text in data_tqdm]
+            if self._process == 'extract':
+                self.numbers = recast_text
+            return recast_text
 
-                if self.__process in ['remove', 'replace', 'extract']:
-                    ntext = []
-                    for text in self._text:
-                        ntext.append(self.__base_recast(text))
-                    return ntext
-
-                elif self.__process in ['extract_remove', 'extract_replace']:
-                    ntext, number_list = [], []
-                    for text in self._text:
-                        text, number = self.__base_recast(text)
-                        ntext.append(text)
-                        number_list.append(number)
-                    self.number_ = number_list
-                    return ntext, number_list
-                    
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                if self.__process in ['remove', 'replace', 'extract']:
-                    ntext = []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'NumberRecast process': self.__process})
-                        text = self._text[i]
-                        ntext.append(self.__base_recast(text))
-                    return ntext
-
-                elif self.__process in ['extract_remove', 'extract_replace']:
-                    ntext, number_list = [], []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'NumberRecast process': self.__process})
-                        text = self._text[i]
-                        text, number = self.__base_recast(text)
-                        ntext.append(text)
-                        number_list.append(number)
-                    self.number_ = number_list
-                    return ntext, number_list
-
+        elif self._process in ['extract_remove', 'remove_extract', 'extract_replace', 'replace_extract']:
+            recast_text, numbers = [], []
+            for text in data_tqdm:
+                text, number = self.__base_recast(text)
+                recast_text.append(text)
+                numbers.append(number)
+            self.numbers = numbers
+            return recast_text, numbers
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -2073,15 +1424,17 @@ class NumberRecast(TextFormatter):
         ntext, number : string, list of strings (process='extract_remove' / process='extract_replace')
             Processed text, Extracted Number(s)
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class AlphabetRecast(TextFormatter):
+class AlphabetRecast(BaseTextRecast):
     """Recast text data by removing all accented, non ascii characters and keeping only alphabets.
     
     Parameters
@@ -2106,41 +1459,8 @@ class AlphabetRecast(TextFormatter):
 
     def __init__(self, process='all', verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__process = process
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-
-        # try:
-        #     assert(isinstance(self.__process, str))
-        # except:
-        #     print(f'Expected process input type <class \'str\'>, input type received {type(self.__process)}')
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
+        super().__init__(verbose=verbose)
+        self._process = process
     
     def __base_recast(self, text, process):
         """Perform selected process on the setup text
@@ -2175,64 +1495,24 @@ class AlphabetRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
+        super().recast()
         
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if isinstance(self.__process, list):
+        text = self.data
+        if isinstance(self._process, list):
 
-            for process in self.__process:
-
-                if self._dtype == str:
-                    self._text = self.__base_recast(self._text, process)
-
-                elif self._dtype == list:
-
-                    if self.__verbose == 0:
-
-                        ntext = []
-                        for text in self._text:
-                            ntext.append(self.__base_recast(text, process))
-                        self._text = ntext
-
-                    if self.__verbose == 1 or self.__verbose == -1:
-
-                        ntext = []
-                        progress_bar = trange(self._count, leave=False)
-                        for i in progress_bar:
-                            progress_bar.set_postfix({'AlphabetRecast process': process})
-                            text = self._text[i]
-                            ntext.append(self.__base_recast(text, process))
-                        self._text = ntext
+            for process in self._process:
+                data_tqdm = tqdm(text, leave=self._verbose_status, disable=self._verbose)
+                data_tqdm.set_postfix({'AlphabetRecast process': f'{process}'})
+                text = [self.__base_recast(text, process) for text in data_tqdm]
             
-            return self._text
+            return text
         
-        elif isinstance(self.__process, str):
+        elif isinstance(self._process, str):
 
-            if self._dtype == str:
-                return self.__base_recast(self._text, self.__process)
-
-            elif self._dtype == list:
-
-                if self.__verbose == 0:
-
-                    ntext = []
-                    for text in self._text:
-                        ntext.append(self.__base_recast(text, self.__process))
-                    return ntext
-
-                if self.__verbose == 1 or self.__verbose == -1:
-
-                    ntext = []
-                    progress_bar = trange(self._count, leave=self.__verbose_status)
-                    for i in progress_bar:
-                        progress_bar.set_postfix({'AlphabetRecast process': self.__process})
-                        text = self._text[i]
-                        ntext.append(self.__base_recast(text, self.__process))
-                    return ntext
-
+            data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+            data_tqdm.set_postfix({'AlphabetRecast process': f'{self._process}'})
+            recast_text = [self.__base_recast(text, self._process) for text in data_tqdm]
+            return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -2248,15 +1528,17 @@ class AlphabetRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class PunctuationRecast(TextFormatter):
+class PunctuationsRecast(BaseTextRecast):
     """Recast text data by removing punctuations.
     
     Parameters
@@ -2279,35 +1561,7 @@ class PunctuationRecast(TextFormatter):
 
     def __init__(self, verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-    
+        super().__init__(verbose=verbose)
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -2319,7 +1573,6 @@ class PunctuationRecast(TextFormatter):
         """
         return text.translate(str.maketrans(string.punctuation, ' ' * len(string.punctuation))).replace(' '*4, ' ').replace(' '*3, ' ').replace(' '*2, ' ').strip()
 
-
     def recast(self):
         """Perform selected process on the setup text
 
@@ -2328,35 +1581,12 @@ class PunctuationRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
+        super().recast()
 
-
-        if self._dtype == str:
-            return self.__base_recast(self._text)
-
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    ntext.append(self.__base_recast(text))
-                return ntext
-
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({'PunctuationRecast process': 'removing'})
-                    text = self._text[i]
-                    ntext.append(self.__base_recast(text))
-                return ntext
-
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({'PunctuationRecast process': 'remove'})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
+        return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -2372,15 +1602,17 @@ class PunctuationRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class TokenisationRecast(TextFormatter):
+class TokenisationRecast(BaseTextRecast):
     """Recast text data by tokenising it.
 
     Tokenisation supported:
@@ -2421,74 +1653,38 @@ class TokenisationRecast(TextFormatter):
 
 
     def __init__(self, package='nltk', method=None, verbose=0):
-
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__package = package
-        self.__method = method
-        self.__verbose_status = True
-        self.__verbose = verbose
-
-        if self.__verbose == -1:
-            self.__verbose_status = False
-
-        elif self.__package == 'spacy':
-            self.__sp = spacy.load('en_core_web_sm')
-
-        try:
-            assert(isinstance(self.__package, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__package)}')
         
-        try:
-            assert(isinstance(self.__method, str))
-        except:
-            print(f'Expected method input type <class \'str\'>, input type received {type(self.__method)}')
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
+        if package in ['nltk', 'spacy']:
+            super().__init__(verbose=verbose)
+            self._package = package
+            self._method = method
 
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-
+            if package == 'spacy':
+                self._sp = spacy.load('en_core_web_sm')
+        else:
+            raise ValueError(
+                f'Expected package either nltk or spacy, {type(package)} is not a supported package.'
+            )
 
     def __nltk_tokenize(self, text):
 
-        if self.__method == 'word':
+        if self._method == 'word':
             from nltk.tokenize import word_tokenize
             return word_tokenize(text)
         
-        if self.__method == 'sentence':
+        if self._method == 'sentence':
             from nltk.tokenize import sent_tokenize
             return sent_tokenize(text)
 
-
     def __spacy_tokenize(self, text):
 
-        text = self.__sp(text)
+        text = self._sp(text)
 
-        if self.__method == 'word':
+        if self._method == 'word':
             return [word.text for word in text]
         
-        if self.__method == 'sentence':
+        if self._method == 'sentence':
             return [sentence for sentence in text.sents]
-
 
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -2499,12 +1695,11 @@ class TokenisationRecast(TextFormatter):
             Processed tokens
         """
 
-        if self.__package == 'nltk':
+        if self._package == 'nltk':
             return self.__nltk_tokenize(text)
 
-        elif self.__package == 'spacy':
+        elif self._package == 'spacy':
             return self.__spacy_tokenize(text)
-
 
     def recast(self):
         """Perform selected process on the setup text
@@ -2514,36 +1709,12 @@ class TokenisationRecast(TextFormatter):
         ntext : list of strings
             Processed tokens
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
+        super().recast()
 
-        if self._dtype == str:
-            return self.__base_recast(self._text)
-
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    text = self.__base_recast(text)
-                    ntext.append(text)
-                return ntext
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({f'TokenisationRecast {self.__package} process': f'{self.__method} tokenisation'})
-                    text = self._text[i]
-                    text = self.__base_recast(text)
-                    ntext.append(text)
-                return ntext
-
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({f'TokenisationRecast [package={self._package}, method={self._method}] process': 'remove'})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
+        return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -2559,15 +1730,17 @@ class TokenisationRecast(TextFormatter):
         ntext : list of strings
             Processed tokens
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class StemmingRecast(TextFormatter):
+class StemmingRecast(BaseTextRecast):
     """Recast text data by performing stemming on it.
     
     Parameters
@@ -2605,48 +1778,15 @@ class StemmingRecast(TextFormatter):
 
     def __init__(self, package='nltk', method='porter', verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__package = package
-        self.__method = method
-        self.__verbose_status = True
-        self.__verbose = verbose
+        if package in ['nltk', 'spacy']:
+            super().__init__(verbose=verbose)
+            self._package = package
+            self._method = method
 
-        if self.__verbose == -1:
-            self.__verbose_status = False
-
-        try:
-            assert(isinstance(self.__package, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__package)}')
-        
-        try:
-            assert(isinstance(self.__method, str))
-        except:
-            print(f'Expected method input type <class \'str\'>, input type received {type(self.__method)}')
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-
+        else:
+            raise ValueError(
+                f'Expected package either nltk or spacy, {type(package)} is not a supported package.'
+            )
 
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -2657,48 +1797,16 @@ class StemmingRecast(TextFormatter):
             Processed text
         """
 
-        if (self.__verbose == 1 or self.__verbose == -1) and self._dtype == str:
-
-            if self.__method == 'porter':
-                from nltk.stem.porter import PorterStemmer
-                porter_stemmer = PorterStemmer()
-                words = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({f'StemmingRecast process': f'{self.__method} stemmer'})
-                    word = text.split()[i]
-                    words.append(porter_stemmer.stem(word))
-                return ' '.join(words)
-
-            elif self.__method == 'snowball':
-                from nltk.stem.snowball import SnowballStemmer
-                snowball_stemmer = SnowballStemmer('english')
-                words = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({f'StemmingRecast process': f'{self.__method} stemmer'})
-                    word = text.split()[i]
-                    words.append(snowball_stemmer.stem(word))
-                return ' '.join(words)
+        if self._method == 'porter':
+            from nltk.stem.porter import PorterStemmer
+            stemmer = PorterStemmer()
         
-        else:
+        elif self._method == 'snowball':
+            from nltk.stem.snowball import SnowballStemmer
+            stemmer = SnowballStemmer('english')
 
-            if self.__method == 'porter':
-                from nltk.stem.porter import PorterStemmer
-                porter_stemmer = PorterStemmer()
-                words = []
-                for word in text.split():
-                    words.append(porter_stemmer.stem(word))
-                return ' '.join(words)
-
-            elif self.__method == 'snowball':
-                from nltk.stem.snowball import SnowballStemmer
-                snowball_stemmer = SnowballStemmer('english')
-                words = []
-                for word in text.split():
-                    words.append(snowball_stemmer.stem(word))
-                return ' '.join(words)
-
+        words = [stemmer.stem(word) for word in text.split()]
+        return ' '.join(words)
 
     def recast(self):
         """Perform selected process on the setup text
@@ -2708,36 +1816,13 @@ class StemmingRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-        
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
+        super().recast()
 
-        if self._dtype == str:
-            return self.__base_recast(self._text)
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({f'StemmingRecast [package={self._package}, method={self._method}] process': 'stemming'})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
 
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    text = self.__base_recast(text)
-                    ntext.append(text)
-                return ntext
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({f'StemmingRecast process': f'{self.__method} stemmer'})
-                    text = self._text[i]
-                    text = self.__base_recast(text)
-                    ntext.append(text)
-                return ntext
-
+        return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -2753,15 +1838,17 @@ class StemmingRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
 
 
-class LemmatizationRecast(TextFormatter):
+class LemmatizationRecast(BaseTextRecast):
     """Recast text data by performing lemmatization on it.
     
     Parameters
@@ -2786,45 +1873,16 @@ class LemmatizationRecast(TextFormatter):
 
     def __init__(self, package='nltk', verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__package = package
-        self.__verbose_status = True
-        self.__verbose = verbose
+        if package in ['nltk', 'spacy']:
+            super().__init__(verbose=verbose)
+            self._package = package
 
-        if self.__verbose == -1:
-            self.__verbose_status = False
-        
-        elif self.__package == 'spacy':
-            self.__sp = spacy.load('en', disable=['parser', 'ner'])
-
-        try:
-            assert(isinstance(self.__package, str))
-        except:
-            print(f'Expected process input type <class \'str\'>, input type received {type(self.__package)}')
-        
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
-
-
-    def setup(self, text):
-        """Change the input text type to supported type
-        Parameters
-        ----------
-        text : string / list of strings / pandas.core.series.Series
-
-        Returns
-        -------
-        self : object
-        """
-
-        self._dtype = type(text)
-        self._text = text
-        self._TextFormatter__text_formatter()
-        self.__setup = True
-
+            if package == 'spacy':
+                self._sp = spacy.load('en', disable=['parser', 'ner'])
+        else:
+            raise ValueError(
+                f'Expected package either nltk or spacy, {type(package)} is not a supported package.'
+            )
 
     def __get_wordnet_pos(self, word):
         from nltk.corpus import wordnet
@@ -2837,7 +1895,6 @@ class LemmatizationRecast(TextFormatter):
 
         return tag_dict.get(tag, wordnet.NOUN)
 
-
     def __base_recast(self, text):
         """Perform selected process on the setup text
 
@@ -2846,38 +1903,17 @@ class LemmatizationRecast(TextFormatter):
         ntext : string
             Processed text
         """
-
-        if (self.__verbose == 1 or self.__verbose == -1) and self._dtype == str:
-
-            if self.__package == 'nltk':
-                import nltk
-                from nltk.stem import WordNetLemmatizer
-                lemmatizer = WordNetLemmatizer()
-                words = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({f'LemmatizationRecast process': f'{self.__package} lemmatizer'})
-                    w = text.split()[i]
-                    words.append(lemmatizer.lemmatize(w, self.__get_wordnet_pos(w)))
-                return ' '.join(words)
             
-            elif self.__package == 'spacy':
-                text = self.__sp(text)
-                return ' '.join([token.lemma_ for token in text])
+        if self._package == 'nltk':
+            import nltk
+            from nltk.stem import WordNetLemmatizer
+            lemmatizer = WordNetLemmatizer()
+            text = ' '.join([lemmatizer.lemmatize(w, self.__get_wordnet_pos(w)) for w in text.split()])
+            return text
         
-        else:
-            
-            if self.__package == 'nltk':
-                import nltk
-                from nltk.stem import WordNetLemmatizer
-                lemmatizer = WordNetLemmatizer()
-                text = ' '.join([lemmatizer.lemmatize(w, self.__get_wordnet_pos(w)) for w in text.split()])
-                return text
-            
-            elif self.__package == 'spacy':
-                text = self.__sp(text)
-                return ' '.join([token.lemma_ for token in text])
-
+        elif self._package == 'spacy':
+            text = self.__sp(text)
+            return ' '.join([token.lemma_ for token in text])
 
     def recast(self):
         """Perform selected process on the setup text
@@ -2887,35 +1923,13 @@ class LemmatizationRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
+        super().recast()
 
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({f'LemmatizationRecast [package={self._package}] process': 'lemmatization'})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
 
-        if self._dtype == str:
-            return self.__base_recast(self._text)
-
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    text = self.__base_recast(text)
-                    ntext.append(text)
-                return ntext
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({f'LemmatizationRecast process': f'{self.__package} lemmatizer'})
-                    text = self._text[i]
-                    text = self.__base_recast(text)
-                    ntext.append(text)
-                return ntext
+        return recast_text
 
 
     def setup_recast(self, text):
@@ -2932,9 +1946,11 @@ class LemmatizationRecast(TextFormatter):
         ntext : string / list of strings
             Processed text
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################

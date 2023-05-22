@@ -40,6 +40,7 @@ class BaseTextRecast(BaseTextDatum):
         """
         Initialize
         """
+        super().__init__()
         if process is not None and not isinstance(process, str):
             raise IncorrectProcessDataType(process)
         
@@ -48,10 +49,11 @@ class BaseTextRecast(BaseTextDatum):
         
         self._setup_check = False
         self._process = process
-        self._verbose_status = True
-        self._verbose = verbose
-        if self._verbose == -1:
+        if verbose == -1:
             self._verbose_status = False
+        else:
+            self._verbose_status = True
+        self._verbose = not bool(verbose)
     
     def setup(self, text):
         """

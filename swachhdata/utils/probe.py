@@ -15,7 +15,7 @@ def probe_string_data(data):
     for item in data:
         if not verify_str(item):
             raise ValueError(
-                f'Expected all str data, got {type(item)}'
+                f'All items in list should be of type str'
             )
     
     return data
