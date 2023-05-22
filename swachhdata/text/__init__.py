@@ -1,4 +1,4 @@
-from ._text import (
+from .recast import (
     urlRecast,
     htmlRecast,
     EscapeSequencesRecast,
@@ -8,14 +8,12 @@ from ._text import (
     HashtagsRecast,
     ShortWordsRecast,
     StopWordsRecast,
-    NumberRecast,
+    NumbersRecast,
     AlphabetRecast,
     PunctuationsRecast,
     StemmingRecast,
     LemmatizationRecast,
-    TokenisationRecast,
-    TextRecast,
-    RecastPipeline
+    TokenisationRecast
 )
 
 __all__ = [
@@ -28,12 +26,10 @@ __all__ = [
     'HashtagsRecast',
     'ShortWordsRecast',
     'StopWordsRecast',
-    'NumberRecast',
+    'NumbersRecast',
     'AlphabetRecast',
     'PunctuationsRecast',
     'StemmingRecast',
     'LemmatizationRecast',
-    'TokenisationRecast',
-    'TextRecast',
-    'RecastPipeline'
+    'TokenisationRecast'
 ]

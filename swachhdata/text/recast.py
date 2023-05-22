@@ -16,9 +16,9 @@ import string
 import emoji
 from emoji import EMOJI_DATA
 
-from tqdm.auto import trange, tqdm
+from tqdm.auto import tqdm
 
-from ._base import BaseTextRecast
+from .base import BaseTextRecast
 from ..utils import probe_string_data
 
 class urlRecast(BaseTextRecast):
@@ -94,6 +94,7 @@ class urlRecast(BaseTextRecast):
         super().__init__(process, verbose)
         self.urls = None
         self.__regex = r'\b((?:https?://)?(?:(?:www\.)?(?:[\da-z\.-]+)\.(?:[a-z]{2,6})|(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|(?:(?:[0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(?::[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(?:ffff(?::0{1,4}){0,1}:){0,1}(?:(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])|(?:[0-9a-fA-F]{1,4}:){1,4}:(?:(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(?:25[0-5]|(?:2[0-4]|1{0,1}[0-9]){0,1}[0-9])))(?::[0-9]{1,4}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])?(?:/[\w\.-]*)*/?)\b'
+        self._name = 'urlRecast'
 
     @property
     def regex(self):
@@ -150,6 +151,8 @@ class urlRecast(BaseTextRecast):
             recast_text = [self.__base_recast(text) for text in data_tqdm]
             if self._process == 'extract':
                 self.urls = recast_text
+            else:
+                self.data = recast_text
             return recast_text
 
         elif self._process in ['extract_remove', 'remove_extract']:
@@ -159,6 +162,7 @@ class urlRecast(BaseTextRecast):
                 recast_text.append(text)
                 urls.append(url)
             self.urls = urls
+            self.data = recast_text
             return recast_text, urls
 
     def setup_recast(self, text):
@@ -185,8 +189,6 @@ class urlRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class htmlRecast(BaseTextRecast):
@@ -215,6 +217,7 @@ class htmlRecast(BaseTextRecast):
     def __init__(self, verbose=0):
 
         super().__init__(verbose=verbose)
+        self._name = 'htmlRecast'
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -241,6 +244,7 @@ class htmlRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({'htmlRecast process': 'remove'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
+        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
@@ -263,8 +267,6 @@ class htmlRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class EscapeSequencesRecast(BaseTextRecast):
@@ -292,6 +294,7 @@ class EscapeSequencesRecast(BaseTextRecast):
     def __init__(self, verbose=0):
 
         super().__init__(verbose=verbose)
+        self._name = 'EscapeSequencesRecast'
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -318,6 +321,7 @@ class EscapeSequencesRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({'EscapeSequencesRecast process': 'remove'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
+        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
@@ -340,8 +344,6 @@ class EscapeSequencesRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class MentionsRecast(BaseTextRecast):
@@ -412,6 +414,7 @@ class MentionsRecast(BaseTextRecast):
 
         super().__init__(process, verbose)
         self.__regex = '([@][A-Za-z0-9._:-]+)'
+        self._name = 'MentionsRecast'
 
     @property
     def regex(self):
@@ -463,6 +466,8 @@ class MentionsRecast(BaseTextRecast):
             recast_text = [self.__base_recast(text) for text in data_tqdm]
             if self._process == 'extract':
                 self.mentions = recast_text
+            else:
+                self.data = recast_text
             return recast_text
 
         elif self._process in ['extract_remove', 'remove_extract']:
@@ -472,6 +477,7 @@ class MentionsRecast(BaseTextRecast):
                 recast_text.append(text)
                 mentions.append(mention)
             self.mentions = mentions
+            self.data = recast_text
             return recast_text, mentions
 
     def setup_recast(self, text):
@@ -498,7 +504,6 @@ class MentionsRecast(BaseTextRecast):
         else:
             return self.recast()
 
-##############################################################################################################
 
 
 class ContractionsRecast(BaseTextRecast):
@@ -525,6 +530,7 @@ class ContractionsRecast(BaseTextRecast):
     def __init__(self, verbose=0):
 
         super().__init__(verbose=verbose)
+        self._name = 'ContractionsRecast'
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -550,6 +556,7 @@ class ContractionsRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({'ContractionsRecast process': 'remove'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
+        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
@@ -572,7 +579,6 @@ class ContractionsRecast(BaseTextRecast):
         else:
             return self.recast()
 
-##############################################################################################################
 
 
 class CaseRecast(BaseTextRecast):
@@ -628,6 +634,7 @@ class CaseRecast(BaseTextRecast):
     def __init__(self, process='lower', verbose=0):
 
         super().__init__(process, verbose)
+        self._name = 'CaseRecast'
 
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -663,6 +670,7 @@ class CaseRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({'CaseRecast process': self._process})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
+        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
@@ -685,8 +693,6 @@ class CaseRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class EmojiRecast(BaseTextRecast):
@@ -769,6 +775,7 @@ class EmojiRecast(BaseTextRecast):
         self._space_out = space_out
         self.emojis = None
         self._emoji_list = list(EMOJI_DATA.keys())
+        self._name = 'EmojiRecast'
 
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -845,6 +852,8 @@ class EmojiRecast(BaseTextRecast):
             recast_text = [self.__base_recast(text) for text in data_tqdm]
             if self._process == 'extract':
                 self.emojis = recast_text
+            else:
+                self.data = recast_text
             return recast_text
 
         elif self._process in ['extract_remove', 'remove_extract', 'extract_replace', 'replace_extract']:
@@ -854,6 +863,7 @@ class EmojiRecast(BaseTextRecast):
                 recast_text.append(text)
                 emojis.append(emoji)
             self.emojis = emojis
+            self.data = recast_text
             return recast_text, emojis
 
     def setup_recast(self, text):
@@ -880,8 +890,6 @@ class EmojiRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class HashtagsRecast(BaseTextRecast):
@@ -949,6 +957,7 @@ class HashtagsRecast(BaseTextRecast):
         super().__init__(process, verbose)
         self.hashtags = None
         self.__regex = '([#][A-Za-z0-9_]+)'
+        self._name = 'HashtagsRecast'
     
     @property
     def regex(self):
@@ -1003,6 +1012,8 @@ class HashtagsRecast(BaseTextRecast):
             recast_text = [self.__base_recast(text) for text in data_tqdm]
             if self._process == 'extract':
                 self.hashtags = recast_text
+            else:
+                self.data = recast_text
             return recast_text
 
         elif self._process in ['extract_remove', 'remove_extract']:
@@ -1012,6 +1023,7 @@ class HashtagsRecast(BaseTextRecast):
                 recast_text.append(text)
                 hashtags.append(hashtag)
             self.hashtags = hashtags
+            self.data = recast_text
             return recast_text, hashtags
 
     def setup_recast(self, text):
@@ -1038,8 +1050,6 @@ class HashtagsRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class ShortWordsRecast(BaseTextRecast):
@@ -1069,6 +1079,7 @@ class ShortWordsRecast(BaseTextRecast):
 
         super().__init__(verbose=verbose)
         self._min_length = min_length
+        self._name = 'ShortWordsRecast'
 
     
     def __base_recast(self, text):
@@ -1095,6 +1106,7 @@ class ShortWordsRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({f'ShortWordsRecast [min_length = {self._min_length}] process': 'remove'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
+        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
@@ -1118,8 +1130,6 @@ class ShortWordsRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class StopWordsRecast(BaseTextRecast):
@@ -1153,6 +1163,7 @@ class StopWordsRecast(BaseTextRecast):
         super().__init__(verbose=verbose)
         self._package = package
         self._stopWords = stopwords
+        self._name = 'StopWordsRecast'
     
     def __setup_package(self):
 
@@ -1190,6 +1201,7 @@ class StopWordsRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({f'StopWordsRecast [package={self._package}] process': 'remove'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
+        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
@@ -1213,10 +1225,8 @@ class StopWordsRecast(BaseTextRecast):
             return self.recast()
 
 
-##############################################################################################################
 
-
-class NumberRecast(BaseTextRecast):
+class NumbersRecast(BaseTextRecast):
     """Recast text data by removing, replacing or extracting numbers.
 
     Number formats supported:
@@ -1302,6 +1312,7 @@ class NumberRecast(BaseTextRecast):
         super().__init__(process, verbose)
         self._seperator = seperator
         self.numbers = None
+        self._name = 'NumbersRecast'
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -1363,6 +1374,8 @@ class NumberRecast(BaseTextRecast):
             recast_text = [self.__base_recast(text) for text in data_tqdm]
             if self._process == 'extract':
                 self.numbers = recast_text
+            else:
+                self.data = recast_text
             return recast_text
 
         elif self._process in ['extract_remove', 'remove_extract', 'extract_replace', 'replace_extract']:
@@ -1399,8 +1412,6 @@ class NumberRecast(BaseTextRecast):
             return self.recast()
 
 
-##############################################################################################################
-
 
 class AlphabetRecast(BaseTextRecast):
     """Recast text data by removing all accented, non ascii characters and keeping only alphabets.
@@ -1429,6 +1440,7 @@ class AlphabetRecast(BaseTextRecast):
 
         super().__init__(verbose=verbose)
         self._process = process
+        self._name = 'AlphabetRecast'
     
     def __base_recast(self, text, process):
         """Perform selected process on the setup text
@@ -1473,6 +1485,7 @@ class AlphabetRecast(BaseTextRecast):
                 data_tqdm.set_postfix({'AlphabetRecast process': f'{process}'})
                 text = [self.__base_recast(text, process) for text in data_tqdm]
             
+            self.data = text
             return text
         
         elif isinstance(self._process, str):
@@ -1480,6 +1493,7 @@ class AlphabetRecast(BaseTextRecast):
             data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
             data_tqdm.set_postfix({'AlphabetRecast process': f'{self._process}'})
             recast_text = [self.__base_recast(text, self._process) for text in data_tqdm]
+            self.data = recast_text
             return recast_text
 
     def setup_recast(self, text):
@@ -1502,8 +1516,6 @@ class AlphabetRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class PunctuationsRecast(BaseTextRecast):
@@ -1530,6 +1542,7 @@ class PunctuationsRecast(BaseTextRecast):
     def __init__(self, verbose=0):
 
         super().__init__(verbose=verbose)
+        self._name = 'PunctuationsRecast'
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -1554,6 +1567,7 @@ class PunctuationsRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({'PunctuationRecast process': 'remove'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
+        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
@@ -1576,8 +1590,6 @@ class PunctuationsRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class TokenisationRecast(BaseTextRecast):
@@ -1633,6 +1645,7 @@ class TokenisationRecast(BaseTextRecast):
             raise ValueError(
                 f'Expected package either nltk or spacy, {type(package)} is not a supported package.'
             )
+        self._name = 'TokenisationRecast'
 
     def __nltk_tokenize(self, text):
 
@@ -1682,6 +1695,7 @@ class TokenisationRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({f'TokenisationRecast [package={self._package}, method={self._method}] process': 'remove'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
+        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
@@ -1704,8 +1718,6 @@ class TokenisationRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class StemmingRecast(BaseTextRecast):
@@ -1755,6 +1767,7 @@ class StemmingRecast(BaseTextRecast):
             raise ValueError(
                 f'Expected package either nltk or spacy, {type(package)} is not a supported package.'
             )
+        self._name = 'StemmingRecast'
 
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -1789,7 +1802,7 @@ class StemmingRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({f'StemmingRecast [package={self._package}, method={self._method}] process': 'stemming'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
-
+        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
@@ -1812,8 +1825,6 @@ class StemmingRecast(BaseTextRecast):
         else:
             return self.recast()
 
-
-##############################################################################################################
 
 
 class LemmatizationRecast(BaseTextRecast):
@@ -1851,6 +1862,7 @@ class LemmatizationRecast(BaseTextRecast):
             raise ValueError(
                 f'Expected package either nltk or spacy, {type(package)} is not a supported package.'
             )
+        self._name = 'LemmatizationRecast'
 
     def __get_wordnet_pos(self, word):
         from nltk.corpus import wordnet
@@ -1896,7 +1908,7 @@ class LemmatizationRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({f'LemmatizationRecast [package={self._package}] process': 'lemmatization'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
-
+        self.data = recast_text
         return recast_text
 
 
@@ -1919,257 +1931,3 @@ class LemmatizationRecast(BaseTextRecast):
             return self.recast()
         else:
             return self.recast()
-
-
-##############################################################################################################
-
-
-def TextRecast(text, **kwargs):
-    """TextRecast: wrapper function for Recast classes.
-    
-    Parameters
-    ----------
-    text : string / list of strings / pandas.core.series.Series
-    **kwargs
-
-    kwargs Template
-    ----------
-    { urlRecast = {'process': 'extract_remove'},
-      htmlRecast = True,
-      EscapeSequenceRecast = True,
-      MentionRecast = {'process': 'extract_remove'},
-      ContractionsRecast = True,
-      CaseRecast = {'process': 'lower'},
-      EmojiRecast = {'process': 'extract_remove', 'space_out': False},
-      HashtagRecast = {'process': 'extract_remove'},
-      ShortWordsRecast = {'min_length': 3},
-      StopWordsRecast = {'package': 'nltk', 'space_out': None},
-      NumberRecast = {'process': 'remove', 'seperator': None},
-      AlphabetRecast = {'process': 'all'},
-      PunctuationRecast = True,
-      StemmingRecast = {'package': 'nltk', 'method': 'porter'},
-      LemmatizationRecast = {'package':'nltk'},
-      TokenisationRecast = {'package': 'nltk', 'method': 'sentence' }
-
-    Attributes
-    ----------
-    * url
-    * mention
-    * emoji
-    * hashtag
-    * token
-    * number
-
-    Returns
-    ---------
-    ntext : string / list of strings
-            Processed text
-    """
-
-    verbose=-1
-
-    ccount = 0 # complete count
-    rcount = len(kwargs) # recast count
-    tcount = len(text) # text length count
-
-    chunk_size = rcount * tcount
-    pbar = tqdm(total=chunk_size)
-
-    if 'urlRecast' in kwargs:
-        
-        ccount +=  1
-        pbar.set_postfix({'urlRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        global url
-        if kwargs['urlRecast']['process'] == 'extract_remove':
-           text, url  = urlRecast(kwargs['urlRecast']['process'], verbose=verbose).setup_recast(text)
-
-        elif kwargs['urlRecast']['process'] == 'extract':
-            url  = urlRecast(kwargs['urlRecast']['process'], verbose=verbose).setup_recast(text)
-        
-        elif kwargs['urlRecast']['process'] == 'remove':
-           text = urlRecast(kwargs['urlRecast']['process'], verbose=verbose).setup_recast(text) 
-
-        pbar.update(tcount)
-
-    if 'htmlRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'htmlRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = htmlRecast(verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-    
-    if 'EscapeSequenceRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'EscapeSequenceRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = EscapeSequenceRecast(verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-    
-    if 'MentionRecast' in kwargs:
-        
-        ccount +=  1
-        pbar.set_postfix({'MentionRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        global mention
-        if kwargs['MentionRecast']['process'] == 'extract_remove':
-           text, mention  = MentionRecast(kwargs['MentionRecast']['process'], verbose=verbose).setup_recast(text)
-
-        elif kwargs['MentionRecast']['process'] == 'extract':
-            mention  = MentionRecast(kwargs['MentionRecast']['process'], verbose=verbose).setup_recast(text)
-        
-        elif kwargs['MentionRecast']['process'] == 'remove':
-           text = MentionRecast(kwargs['MentionRecast']['process'], verbose=verbose).setup_recast(text)
-
-        pbar.update(tcount)
-
-    if 'ContractionsRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'ContractionsRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = ContractionsRecast(verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-    
-    if 'CaseRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'CaseRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = CaseRecast(kwargs['CaseRecast']['process'], verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-    
-    # if 'EmojiRecast' in kwargs:
-
-    #     ccount +=  1
-    #     pbar.set_postfix({'EmojiRecast || TextRecast No': f'{ccount}/{rcount}'})
-        
-    #     global emoji
-    #     if kwargs['EmojiRecast']['process'] == 'extract_remove':
-    #        text, emoji  = EmojiRecast(kwargs['EmojiRecast']['process'], kwargs['EmojiRecast']['space_out'], verbose=verbose).setup_recast(text)
-
-    #     elif kwargs['EmojiRecast']['process'] == 'extract':
-    #         emoji  = EmojiRecast(kwargs['EmojiRecast']['process'], kwargs['EmojiRecast']['space_out'], verbose=verbose).setup_recast(text)
-        
-    #     elif kwargs['EmojiRecast']['process'] == 'remove':
-    #        text = EmojiRecast(kwargs['EmojiRecast']['process'], kwargs['EmojiRecast']['space_out'], verbose=verbose).setup_recast(text)
-
-    #     pbar.update(tcount)
-    
-    if 'HashtagRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'HashtagRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        global hashtag
-        if kwargs['HashtagRecast']['process'] == 'extract_remove':
-           text, hashtag  = HashtagRecast(kwargs['HashtagRecast']['process'], verbose=verbose).setup_recast(text)
-
-        elif kwargs['HashtagRecast']['process'] == 'extract':
-            hashtag  = HashtagRecast(kwargs['HashtagRecast']['process'], verbose=verbose).setup_recast(text)
-        
-        elif kwargs['HashtagRecast']['process'] == 'remove':
-           text = HashtagRecast(kwargs['HashtagRecast']['process'], verbose=verbose).setup_recast(text)
-        
-        pbar.update(tcount)
-    
-    if 'ShortWordsRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'ShortWordsRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = ShortWordsRecast(kwargs['ShortWordsRecast']['min_length'], verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-
-    if 'StopWordsRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'StopWordsRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = StopWordsRecast(kwargs['StopWordsRecast']['package'], kwargs['StopWordsRecast']['stopwords'], verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-
-    if 'NumberRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'NumberRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        global number
-        if kwargs['NumberRecast']['process'] == 'extract_remove' or kwargs['NumberRecast']['process'] == 'extract_replace':
-           text, number  = NumberRecast(kwargs['NumberRecast']['process'], kwargs['NumberRecast']['seperator'], verbose=verbose).setup_recast(text)
-
-        elif kwargs['NumberRecast']['process'] == 'extract':
-            number  = NumberRecast(kwargs['NumberRecast']['process'], kwargs['NumberRecast']['seperator'], verbose=verbose).setup_recast(text)
-        
-        elif kwargs['NumberRecast']['process'] == 'remove' or kwargs['NumberRecast']['process'] == 'replace':
-           text = NumberRecast(kwargs['NumberRecast']['process'], kwargs['NumberRecast']['seperator'], verbose=verbose).setup_recast(text)
-        
-        pbar.update(tcount)
-
-    if 'AlphabetRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'AlphabetRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = AlphabetRecast(kwargs['AlphabetRecast']['process'], verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-
-    if 'PunctuationRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'PunctuationRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = PunctuationRecast(verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-
-    if 'StemmingRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'StemmingRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = StemmingRecast(kwargs['StemmingRecast']['package'], kwargs['StemmingRecast']['method'], verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-
-    if 'LemmatizationRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'LemmatizationRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        text = LemmatizationRecast(kwargs['LemmatizationRecast']['package'], verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-
-    if 'TokenisationRecast' in kwargs:
-
-        ccount +=  1
-        pbar.set_postfix({'TokenisationRecast || TextRecast No': f'{ccount}/{rcount}'})
-
-        global token
-        token = TokenisationRecast(kwargs['TokenisationRecast']['package'], kwargs['TokenisationRecast']['method'], verbose=verbose).setup_recast(text)
-        pbar.update(tcount)
-
-    pbar.set_postfix({'TextRecast Complete! || TextRecast No': f'{ccount}/{rcount}'})
-    pbar.close()
-    
-    return text
-
-
-##############################################################################################################
-
-
-      
-def RecastPipeline(text, recastFuncs, **kwargs):
-
-    ccount = 0 # complete count
-    rcount = len(recastFuncs) # recast count
-    tcount = len(text) # text length count
-
-    chunk_size = rcount * tcount
-    pbar = tqdm(total=chunk_size)
-
-    for rec in recastFuncs:
-        text = rec.setup_recast(text)
-        pbar.update(tcount)
-    
-    return text
