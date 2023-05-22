@@ -18,7 +18,7 @@ from emoji import EMOJI_DATA
 
 from tqdm.auto import trange, tqdm
 
-from ._base import TextFormatter, BaseTextRecast
+from ._base import BaseTextRecast
 from ..utils import probe_string_data
 
 class urlRecast(BaseTextRecast):
@@ -267,7 +267,7 @@ class htmlRecast(BaseTextRecast):
 ##############################################################################################################
 
 
-class EscapeSequencesRecast(TextFormatter):
+class EscapeSequencesRecast(BaseTextRecast):
     """Recast text data by removing Escape Sequences.
 
     Parameters
@@ -291,17 +291,7 @@ class EscapeSequencesRecast(TextFormatter):
 
     def __init__(self, verbose=0):
 
-        TextFormatter.__init__(self)
-        self.__setup = False
-        self.__verbose_status = True
-        self.__verbose = verbose
-        if self.__verbose == -1:
-            self.__verbose_status = False
-
-        try:
-            assert(isinstance(self.__verbose, int))
-        except:
-            print(f'Expected verbose input type <class \'int\'>, input type received {type(self.__verbose)}')
+        super().__init__(verbose=verbose)
     
     def __base_recast(self, text):
         """Perform selected process on the setup text
@@ -315,7 +305,6 @@ class EscapeSequencesRecast(TextFormatter):
         ntext = text.replace('\r', ' ').replace('\n', ' ').replace('\t', ' ').replace('\n', ' ').replace('\f', ' ')
         return ntext
 
-
     def recast(self):
         """Perform selected process on the setup text
 
@@ -324,35 +313,12 @@ class EscapeSequencesRecast(TextFormatter):
         ntext : string / list of strings 
             Processed text
         """
+        super().recast()
         
-        try:
-            assert(self.__setup)
-        except:
-            print(f'method setup needs to be called before recast')
-        
-        if self._dtype == str:
-
-            return self.__base_recast(self._text)
-
-        elif self._dtype == list:
-
-            if self.__verbose == 0:
-
-                ntext = []
-                for text in self._text:
-                    ntext.append(self.__base_recast(text))
-                return ntext
-            
-            if self.__verbose == 1 or self.__verbose == -1:
-
-                ntext = []
-                progress_bar = trange(self._count, leave=self.__verbose_status)
-                for i in progress_bar:
-                    progress_bar.set_postfix({'EscapeSequenceRecast process': 'removing'})
-                    text = self._text[i]
-                    ntext.append(self.__base_recast(text))
-                return ntext
-
+        data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
+        data_tqdm.set_postfix({'EscapeSequencesRecast process': 'remove'})
+        recast_text = [self.__base_recast(text) for text in data_tqdm]
+        return recast_text
 
     def setup_recast(self, text):
         """Change the input text type to supported type
@@ -368,9 +334,11 @@ class EscapeSequencesRecast(TextFormatter):
         ntext : string / list of strings (process='remove')
             Processed text
         """
-
-        self.setup(text)
-        return self.recast()
+        if not self._setup_check:
+            self.setup(text)
+            return self.recast()
+        else:
+            return self.recast()
 
 
 ##############################################################################################################
