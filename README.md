@@ -6,6 +6,7 @@
 [![Downloads](https://static.pepy.tech/personalized-badge/swachhdata?period=total&units=international_system&left_color=gray&right_color=blue&left_text=Downloads)](https://pepy.tech/project/swachhdata)
 ![GitHub last commit](https://img.shields.io/github/last-commit/swachhdata/swachhdata?color=green)
 [![GitHub](https://img.shields.io/github/license/swachhdata/swachhdata.svg)](https://github.com/swachhdata/swachhdata/blob/master/LICENSE)
+[![CodeFactor](https://www.codefactor.io/repository/github/swachhdata/swachhdata/badge)](https://www.codefactor.io/repository/github/swachhdata/swachhdata)
 
 * Simple and efficient tools for cleaning and transforming data
 * Accessible to everybody, and reusable in various contexts
