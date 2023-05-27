@@ -81,7 +81,6 @@ Swachhdata is released under the MPL-2.0 license. For more information, please r
 
 If you have any questions, suggestions, or feedback, you can reach out to the Swachhdata team by [opening an issue](https://github.com/your-username/Swachhdata/issues) on the GitHub repository.
 
----
 
 Thank you for choosing Swachhdata! We hope you find it helpful in cleaning and transforming your data.
 
