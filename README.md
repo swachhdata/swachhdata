@@ -4,7 +4,6 @@
 
 Swachhdata is an open-source Python package that offers simple and efficient tools for cleaning and transforming text data. It aims to provide accessibility to everyone and encourages reusability in various contexts. With Swachhdata, you can easily clean and preprocess your data using a collection of functions and build pipelines to streamline your data processing tasks. 
 
-[![PyPI version](https://badge.fury.io/py/swachhdata.svg)](https://badge.fury.io/py/swachhdata)
 [![CodeFactor](https://www.codefactor.io/repository/github/Swachhdata/Swachhdata/badge)](https://www.codefactor.io/repository/github/Swachhdata/Swachhdata)
 [![Downloads](https://static.pepy.tech/personalized-badge/Swachhdata?period=total&units=international_system&left_color=gray&right_color=blue&left_text=Downloads)](https://pepy.tech/project/Swachhdata)
 ![GitHub last commit](https://img.shields.io/github/last-commit/Swachhdata/Swachhdata?color=green)
