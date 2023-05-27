@@ -49,11 +49,8 @@ class ModuleTextRecast(BaseTextDatum):
         """
         Setup & Recast
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 from .pipeline import Pipeline
 

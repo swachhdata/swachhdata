@@ -48,5 +48,5 @@ class Pipeline(ModuleTextRecast):
         return self.data
 
     def setup_recast(self, text=None):
-        self.setup(text)
+        super().setup(text)
         return self.recast()

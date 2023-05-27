@@ -183,11 +183,8 @@ class urlRecast(BaseTextRecast):
         ntext, url : string / list of strings, list of strings (process='extract_remove')
             Processed text, Extracted URLs
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -261,11 +258,8 @@ class htmlRecast(BaseTextRecast):
         ntext : string / list of strings
             Processed text
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -338,11 +332,8 @@ class EscapeSequencesRecast(BaseTextRecast):
         ntext : string / list of strings (process='remove')
             Processed text
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -498,11 +489,8 @@ class MentionsRecast(BaseTextRecast):
         text, mentions : string / list of strings, list of strings (process='extract_remove')
             Processed text, Extracted Mention(s)
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -573,11 +561,8 @@ class ContractionsRecast(BaseTextRecast):
         ntext : string / list of strings (process='remove')
             Processed text
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -687,11 +672,8 @@ class CaseRecast(BaseTextRecast):
         ntext : string / list of strings
             Processed text
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -884,11 +866,8 @@ class EmojiRecast(BaseTextRecast):
         ntext, emoji : string / list of strings, list of strings (process='extract_remove' / process='extract_replace')
             Processed text, Extracted Emojis
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -1044,11 +1023,8 @@ class HashtagsRecast(BaseTextRecast):
         ntext, hashtag : string / list of strings, list of strings (process='extract_remove')
             Processed text, Extracted Hashtag(s)
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -1124,11 +1100,8 @@ class ShortWordsRecast(BaseTextRecast):
             Processed text
         """
 
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -1218,11 +1191,8 @@ class StopWordsRecast(BaseTextRecast):
         ntext : string / list of strings
             Processed text
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -1405,11 +1375,8 @@ class NumbersRecast(BaseTextRecast):
         ntext, number : string, list of strings (process='extract_remove' / process='extract_replace')
             Processed text, Extracted Number(s)
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -1510,11 +1477,8 @@ class AlphabetRecast(BaseTextRecast):
         ntext : string / list of strings
             Processed text
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -1584,11 +1548,8 @@ class PunctuationsRecast(BaseTextRecast):
         ntext : string / list of strings
             Processed text
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -1712,11 +1673,8 @@ class TokenisationRecast(BaseTextRecast):
         ntext : list of strings
             Processed tokens
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -1819,11 +1777,8 @@ class StemmingRecast(BaseTextRecast):
         ntext : string / list of strings
             Processed text
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
@@ -1926,11 +1881,8 @@ class LemmatizationRecast(BaseTextRecast):
         ntext : string / list of strings
             Processed text
         """
-        if not self._setup_check:
-            self.setup(text)
-            return self.recast()
-        else:
-            return self.recast()
+        self.setup(text)
+        return self.recast()
 
 
 
