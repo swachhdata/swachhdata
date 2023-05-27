@@ -18,7 +18,7 @@ setuptools.setup(
         'Natural Language :: English',
         'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
         'Operating System :: OS Independent',
-        'Development Status :: 6 - Mature'
+        'Development Status :: 5 - Production/Stable'
     ],
     packages=setuptools.find_namespace_packages(include=['swachhdata', 'swachhdata.*']),
     install_requires=[
