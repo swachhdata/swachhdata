@@ -43,7 +43,7 @@ To use Swachhdata, import the package in your Python script or Jupyter Notebook:
 import swachhdata.text as sdt
 ```
 
-Once imported, you can start utilizing the functions and pipelines provided by Swachhdata to clean and transform your data. Here's an example of how you can remove duplicates from a list of strings using Swachhdata:
+Once imported, you can start utilizing the functions and pipelines provided by Swachhdata to clean and transform your data. Here's an example of how you can build pipeline to clean text data:
 
 ```python
 pipeline = sdt.htmlRecast() + \
@@ -75,7 +75,7 @@ Before submitting a pull request, please ensure that your code adheres to the pr
 
 ## License
 
-Swachhdata is released under the MPL-2.0 license. For more information, please refer to the [LICENSE](https://github.com/Swachhdata/Swachhdata/blob/main/LICENSE) file.
+Swachhdata is released under the MPL-2.0 license. For more information, please refer to the [LICENSE](https://github.com/Swachhdata/Swachhdata/blob/main/LICENSE.txt) file.
 
 ## Contact
 
