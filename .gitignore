@@ -168,3 +168,4 @@ dmypy.json
 .DS_Store
 swachhdata/text/_text.py
 .gitignore
+.DS_Store

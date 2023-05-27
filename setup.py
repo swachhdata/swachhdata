@@ -33,5 +33,6 @@ setuptools.setup(
         'gensim>=3.6.0',
         'num2words>=0.5.10',
         'opencv-python>=4.1.2.30',
+        'emoji>=2.2.0'
     ]
 )
