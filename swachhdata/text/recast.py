@@ -1931,3 +1931,19 @@ class LemmatizationRecast(BaseTextRecast):
             return self.recast()
         else:
             return self.recast()
+
+
+
+def RecastPipeline(text, recastFuncs, **kwargs):
+    
+    rcount = len(recastFuncs) # recast count
+    tcount = len(text) # text length count
+
+    chunk_size = rcount * tcount
+    pbar = tqdm(total=chunk_size)
+
+    for rec in recastFuncs:
+        text = rec.setup_recast(text)
+        pbar.update(tcount)
+    
+    return text

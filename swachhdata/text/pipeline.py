@@ -11,6 +11,7 @@ class Pipeline(ModuleTextRecast):
         self.chain = chain
     
     def __add__(self, other):
+        
         if hasattr(self, 'id_pipeline') and hasattr(other, 'id_pipeline'):
             chain = self.chain + other.chain
         elif hasattr(self, 'id_pipeline') and not hasattr(other, 'id_pipeline'):
