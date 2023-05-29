@@ -1656,7 +1656,6 @@ class TokenisationRecast(BaseTextRecast):
         data_tqdm = tqdm(self.data, leave=self._verbose_status, disable=self._verbose)
         data_tqdm.set_postfix({f'TokenisationRecast [package={self._package}, method={self._method}] process': 'remove'})
         recast_text = [self.__base_recast(text) for text in data_tqdm]
-        self.data = recast_text
         return recast_text
 
     def setup_recast(self, text):
